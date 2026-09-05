@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AJ-Industry"
+description = "An Arabic-first industrial engineering platform for AJ-Industry, showcasing machine design, reverse engineering, 3D printing, manufacturing services, and future client project tracking."
+version = "1.0.0"
+id = "artifacts/aj-industry"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24328
+
+[services.development]
+run = "pnpm --filter @workspace/aj-industry run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/aj-industry", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/aj-industry/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24328"
+BASE_PATH = "/"
