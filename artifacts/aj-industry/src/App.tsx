@@ -36,6 +36,12 @@ function display(language: Language, arabic: React.ReactNode, english: React.Rea
   return ar(language) ? arabic : english;
 }
 
+const whyWeImages = [
+  { src: '/media/why-we-1.jpeg', altAr: 'مهندس يراجع نموذجاً هندسياً ثلاثي الأبعاد', altEn: 'Engineer reviewing a 3D engineering model' },
+  { src: '/media/why-we-2.png', altAr: 'آلة تصنيع CNC داخل منشأة صناعية', altEn: 'CNC machine inside an industrial facility' },
+  { src: '/media/why-we-3.jpeg', altAr: 'تصنيع دقيق لقطع ميكانيكية', altEn: 'Precision manufacturing of mechanical parts' },
+];
+
 function LoadingBlock({ label = 'جاري تحميل البيانات' }: { label?: string }) {
   return <div className="grid gap-3" data-testid="status-loading">
     <div className="h-5 w-32 animate-pulse rounded bg-secondary" />
@@ -195,6 +201,11 @@ function Home() {
   const stats = content?.stats ?? [];
   const stages = content?.designStages ?? [];
   const differentiators = content?.differentiators ?? [];
+  const [whyImageIndex, setWhyImageIndex] = useState(0);
+  useEffect(() => {
+    const interval = window.setInterval(() => setWhyImageIndex((current) => (current + 1) % whyWeImages.length), 4500);
+    return () => window.clearInterval(interval);
+  }, []);
   return <Shell>
     <main>
       <section className="relative isolate min-h-[100svh] overflow-hidden border-b border-border pt-[74px]" data-testid="section-hero">
@@ -235,14 +246,36 @@ function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8">
-        <div className="grid items-end gap-10 lg:grid-cols-[1fr_1.3fr]"><SectionHeading eyebrow="THE AJ APPROACH" title={display(language, 'لا نبيع ساعات. نبني نتائج قابلة للقياس.', 'We do not sell hours. We build measurable outcomes.')} body={display(language, 'فريق صغير بخبرة عميقة في الميكاترونكس، يفهم ضغط المصنع ويتحدث لغة أرضية الإنتاج.', 'A focused team with deep mechatronics experience. We understand factory pressure and speak the language of the production floor.')} /><div className="justify-self-end font-code text-xs text-muted-foreground">[ 01 — 03 ]</div></div>
-        <div className="mt-14 grid gap-4 md:grid-cols-3">
-          {(differentiators.length ? differentiators : [
-            { titleAr: 'فهم من الداخل', titleEn: 'Inside-out understanding', descriptionAr: 'نبدأ من المشكلة التشغيلية، لا من كتالوج الحلول.', descriptionEn: 'We start with the operational problem, not a catalogue of solutions.' },
-            { titleAr: 'قرار مدعوم بالبيانات', titleEn: 'Data-backed decisions', descriptionAr: 'محاكاة، قياسات، ورسومات توضّح ما سيحدث قبل أن نصنّعه.', descriptionEn: 'Simulation, measurements, and drawings show what happens before we make it.' },
-            { titleAr: 'تسليم يمكن تشغيله', titleEn: 'Ready to run', descriptionAr: 'ملفات موثقة وقطع دقيقة وتسليم يفكر في الصيانة القادمة.', descriptionEn: 'Documented files, precise parts, and a handover that considers the next service.' },
-          ]).map((item, index) => <div key={index} className="group border border-border bg-card p-7 transition-colors hover:border-primary/60" data-testid={`card-differentiator-${index}`}><span className="font-code text-xs text-primary">0{index + 1}</span><h3 className="mt-10 font-display text-xl font-bold">{display(language, item.titleAr, item.titleEn)}</h3><p className="mt-3 text-sm leading-7 text-muted-foreground">{display(language, item.descriptionAr, item.descriptionEn)}</p></div>)}
+      <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8" data-testid="section-why-we">
+        <div dir={ar(language) ? 'rtl' : 'ltr'} className="grid items-center gap-12 lg:grid-cols-[1.05fr_.95fr] lg:gap-20">
+          <div>
+            <SectionHeading
+              eyebrow="WHY WE / 01"
+              title={display(language, 'لا نبيع ساعات. نبني نتائج قابلة للقياس.', 'We do not sell hours. We build measurable outcomes.')}
+              body={display(language, 'نحن موجودون لنحوّل التعقيد الصناعي إلى قرارات هندسية واضحة، من الفكرة والـ CAD إلى ملفات التصنيع والقطعة الوظيفية.', 'We exist to turn industrial complexity into clear engineering decisions, from the first idea and CAD file to manufacturing-ready outputs and functional parts.')}
+            />
+            <div className="mt-10 grid gap-3">
+              {(differentiators.length ? differentiators : [
+                { titleAr: 'حل هندسي متكامل', titleEn: 'One engineering partner', descriptionAr: 'من الفكرة والـ CAD إلى ملفات التصنيع والقطعة الوظيفية.', descriptionEn: 'From the idea and CAD to manufacturing files and functional parts.' },
+                { titleAr: 'تقليل المخاطر قبل الإنتاج', titleEn: 'Less risk before production', descriptionAr: 'اختبر الحركة والملاءمة والخامة قبل الالتزام بتصنيع مكلف.', descriptionEn: 'Validate motion, fit, and materials before costly production.' },
+                { titleAr: 'وضوح تقني يمكن الوثوق به', titleEn: 'Technical clarity', descriptionAr: 'مخرجات محددة وتفاوتات موثقة وتواصل مباشر مع المهندس.', descriptionEn: 'Defined outputs, documented tolerances, and direct engineering communication.' },
+              ]).map((item, index) => <div key={index} className="flex gap-4 border-t border-border py-4" data-testid={`card-why-we-${index}`}>
+                <span className="font-code text-xs text-primary">0{index + 1}</span>
+                <div><h3 className="font-semibold">{display(language, item.titleAr, item.titleEn)}</h3><p className="mt-1 text-sm leading-7 text-muted-foreground">{display(language, item.descriptionAr, item.descriptionEn)}</p></div>
+              </div>)}
+            </div>
+          </div>
+          <div dir="ltr">
+            <div className="relative aspect-[4/3] overflow-hidden border border-border bg-card" data-testid="why-we-image-rotator" aria-live="polite">
+              {whyWeImages.map((image, index) => <img key={image.src} src={image.src} alt={display(language, image.altAr, image.altEn)} className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === whyImageIndex ? 'opacity-100' : 'opacity-0'}`} data-testid={`img-why-we-${index + 1}`} />)}
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-[#071126]/85 px-5 py-4 backdrop-blur-sm">
+                <span className="font-code text-[10px] tracking-[.18em] text-primary">AJ / ENGINEERING INTELLIGENCE</span>
+                <div className="flex gap-2" role="tablist" aria-label={display(language, 'صور لماذا نحن', 'Why we images')}>
+                  {whyWeImages.map((image, index) => <button key={image.src} type="button" role="tab" aria-selected={index === whyImageIndex} aria-label={`${display(language, 'الصورة', 'Image')} ${index + 1}`} onClick={() => setWhyImageIndex(index)} className={`size-2 border border-primary transition-colors ${index === whyImageIndex ? 'bg-primary' : 'bg-transparent'}`} data-testid={`button-why-we-image-${index + 1}`} />)}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
