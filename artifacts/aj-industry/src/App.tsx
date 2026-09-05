@@ -30,7 +30,11 @@ function LanguageProvider({ children }: { children: React.ReactNode }) {
 }
 
 const ar = (language: Language) => language === 'ar';
-const display = (language: Language, arabic: string, english: string) => ar(language) ? arabic : english;
+function display(language: Language, arabic: string, english: string): string;
+function display(language: Language, arabic: React.ReactNode, english: React.ReactNode): React.ReactNode;
+function display(language: Language, arabic: React.ReactNode, english: React.ReactNode): React.ReactNode {
+  return ar(language) ? arabic : english;
+}
 
 function LoadingBlock({ label = 'جاري تحميل البيانات' }: { label?: string }) {
   return <div className="grid gap-3" data-testid="status-loading">
@@ -193,31 +197,41 @@ function Home() {
   const differentiators = content?.differentiators ?? [];
   return <Shell>
     <main>
-      <section className="relative isolate min-h-[720px] overflow-hidden border-b border-border pt-[74px]">
-        <video className="absolute inset-0 -z-20 h-full w-full object-cover opacity-40" autoPlay muted loop playsInline poster="/media/services-reference.png"><source src="/media/hero-reference.webm" type="video/webm" /><source src="/media/hero-cad.mp4" type="video/mp4" /></video>
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,hsl(224_52%_6%/.98)_0%,hsl(224_52%_6%/.86)_46%,hsl(224_52%_6%/.38)_100%)]" />
-        <div className="absolute inset-0 -z-10 grid-tech opacity-30" />
+      <section className="relative isolate min-h-[716px] overflow-hidden border-b border-border pt-[74px]" data-testid="section-hero">
+        <video className="absolute inset-0 -z-20 h-full w-full object-cover opacity-50" autoPlay muted loop playsInline poster="/media/hero-section-poster.jpg" aria-hidden="true">
+          <source src="/media/hero-section.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,hsl(224_52%_6%/.78)_0%,hsl(224_52%_6%/.86)_48%,hsl(224_52%_6%/.78)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_52%_45%,hsl(211_100%_61%/.15),transparent_42%)]" />
+        <div className="absolute inset-0 -z-10 grid-tech opacity-20" />
         <div className="scanline pointer-events-none absolute left-[20%] top-0 -z-10 h-1/3 w-px bg-primary/40" />
-        <div className="mx-auto flex min-h-[646px] max-w-7xl items-center px-5 py-24 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="animate-rise flex items-center gap-3 font-code text-[10px] tracking-[.22em] text-primary"><span className="size-2 bg-primary pulse-line" /> AJ—INDUSTRY / RIYADH / 24.5937° N</div>
-            <h1 className="animate-rise delay-1 mt-7 font-display text-5xl font-bold leading-[1.08] tracking-[-.04em] text-balance sm:text-7xl lg:text-[92px]">{display(language, 'هندسةٌ تُحرّك الصناعة.', 'Engineering that moves industry.')}</h1>
-            <p className="animate-rise delay-2 mt-7 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">{display(language, 'نصمّم ونطوّر ونصنّع الحلول التي تحتاجها خطوط الإنتاج — من أول قياس إلى أول دورة تشغيل.', 'We design, upgrade, and make the systems your production line needs — from first measurement to first cycle.')}</p>
-            <div className="animate-rise delay-3 mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link href="/#contact" className="flex h-12 items-center justify-center gap-3 bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-1" data-testid="link-hero-contact">{display(language, 'ابدأ محادثة هندسية', 'Start an engineering conversation')} <ArrowUpRight className="size-4" /></Link>
-              <Link href="/#services" className="flex h-12 items-center justify-center gap-3 border border-border bg-background/30 px-6 text-sm font-bold transition-colors hover:border-primary hover:text-primary" data-testid="link-hero-services">{display(language, 'استكشف قدراتنا', 'Explore capabilities')} <ArrowLeft className="size-4" /></Link>
+        <div dir={ar(language) ? 'rtl' : 'ltr'} className="mx-auto flex min-h-[572px] max-w-7xl items-center justify-between gap-10 px-5 pb-28 pt-20 lg:px-8">
+          <div className={`max-w-3xl ${ar(language) ? 'text-right' : 'text-left'}`}>
+            <div className="animate-rise flex items-center gap-3 font-code text-[10px] tracking-[.16em] text-primary"><span className="size-2 bg-primary pulse-line" /> FIELD NOTE / 05 / ENGINEERING INTELLIGENCE</div>
+            <h1 className="animate-rise delay-1 mt-6 font-display text-5xl font-bold leading-[1.04] tracking-[-.045em] text-balance sm:text-7xl lg:text-[76px]">
+              {ar(language) ? <>نحوّل <span className="text-primary">التعقيد الصناعي</span><br />إلى قرار قابل للتنفيذ.</> : <>Turn industrial<br /><span className="text-primary">complexity</span> into motion.</>}
+            </h1>
+            <p className="animate-rise delay-2 mt-6 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">{display(language, 'من ملفات التصنيع الجاهزة إلى الآلة المناسبة، نصنع مساراً واضحاً للمصانع وملاك الآلات والمشترين.', 'From manufacturing-ready files to the right machine, we make the path clear for factories, owners, and buyers.')}</p>
+            <div className="animate-rise delay-3 mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/#contact" className="flex h-12 items-center justify-center gap-3 bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-1" data-testid="link-hero-contact">{display(language, 'ابدأ محادثة هندسية', 'Start an engineering brief')} <ArrowUpRight className="size-4" /></Link>
+              <Link href="/#services" className="flex h-12 items-center justify-center gap-3 border border-border bg-background/30 px-6 text-sm font-bold transition-colors hover:border-primary hover:text-primary" data-testid="link-hero-services">{display(language, 'تصفح القدرات المعتمدة', 'Browse approved machinery')} <ArrowLeft className="size-4" /></Link>
             </div>
           </div>
+          <div className="hidden w-64 shrink-0 border border-border/80 bg-background/65 p-5 backdrop-blur-sm lg:block">
+            <div className="flex items-center justify-between font-code text-[9px] text-muted-foreground"><span>SYSTEM / ONLINE</span><span>AJ—04</span></div>
+            <div className="mt-7 border-t border-border/70 pt-4">
+              <p className="font-code text-[9px] uppercase tracking-[.14em] text-muted-foreground">CURRENT FOCUS</p>
+              <p className="mt-3 font-display text-xl font-bold leading-tight">Production<br />readiness</p>
+            </div>
+            <div className="mt-7 flex items-center justify-between font-code text-[9px]"><span className="text-muted-foreground">Feasibility</span><span className="text-accent">READY</span></div>
+            <div className="mt-2 h-px bg-border"><div className="h-px w-4/5 bg-primary" /></div>
+            <div className="mt-3 flex items-center justify-between font-code text-[9px] text-muted-foreground"><span>Response time</span><span>24–48 H</span></div>
+          </div>
         </div>
-        <div className="absolute bottom-0 right-0 hidden w-80 border-l border-t border-border/70 bg-background/55 p-5 backdrop-blur-sm lg:block">
-          <div className="flex items-center justify-between font-code text-[10px] text-muted-foreground"><span>LIVE SYSTEMS</span><span className="text-accent">● ONLINE</span></div>
-          <div className="mt-8 grid grid-cols-2 gap-4 font-code text-xs"><span className="text-muted-foreground">CAD / FEA</span><span className="text-right text-foreground">READY</span><span className="text-muted-foreground">FABRICATION</span><span className="text-right text-foreground">READY</span></div>
-        </div>
-      </section>
-
-      <section className="border-b border-border bg-card/35" data-testid="section-stats">
-        <div className="mx-auto grid max-w-7xl divide-y divide-border px-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:px-8">
-          {(stats.length ? stats : [{ value: '01', labelAr: 'شريكك الهندسي', labelEn: 'Your engineering partner' }, { value: '360°', labelAr: 'من الفكرة إلى التشغيل', labelEn: 'Idea to operation' }, { value: '24/7', labelAr: 'عقلية تحسين مستمر', labelEn: 'Continuous improvement' }]).map((stat, index) => <div key={index} className="flex items-center justify-between px-1 py-6 sm:block sm:px-8 sm:first:pl-0" data-testid={`stat-home-${index}`}><span className="font-code text-2xl text-primary sm:block sm:text-3xl">{stat.value}</span><span className="text-sm text-muted-foreground sm:mt-2 sm:block">{display(language, stat.labelAr, stat.labelEn)}</span></div>)}
+        <div dir={ar(language) ? 'rtl' : 'ltr'} className="absolute inset-x-0 bottom-0 border-t border-border/80 bg-[#071126]/90 backdrop-blur-sm" data-testid="section-stats">
+          <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-border/80 sm:grid-cols-4 lg:px-8">
+            {(stats.length ? stats : [{ value: '06', labelAr: 'خدمات هندسية', labelEn: 'Engineering services' }, { value: '18', labelAr: 'سنة خبرة', labelEn: 'Years of experience' }, { value: '04', labelAr: 'مراحل واضحة', labelEn: 'Clear stages' }, { value: '24h', labelAr: 'زمن الرد الأولي', labelEn: 'First response' }]).map((stat, index) => <div key={index} className="flex min-h-[72px] items-center justify-between gap-3 border-b border-border/70 px-5 py-4 last:border-b-0 sm:block sm:border-b-0 sm:px-7 sm:py-5" data-testid={`stat-home-${index}`}><span className="font-code text-2xl text-primary sm:block sm:text-3xl">{stat.value}</span><span className="text-xs text-muted-foreground sm:mt-2 sm:block">{display(language, stat.labelAr, stat.labelEn)}</span></div>)}
+          </div>
         </div>
       </section>
 
