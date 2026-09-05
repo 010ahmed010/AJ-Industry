@@ -72,7 +72,7 @@
   --destructive-foreground: 213 36% 94%;
   --input: 219 36% 24%;
   --ring: 211 100% 61%;
-  --app-font-sans: 'Cairo', sans-serif;
+  --app-font-sans: 'Space Grotesk', sans-serif;
   --app-font-serif: 'Space Grotesk', sans-serif;
   --app-font-mono: 'IBM Plex Mono', monospace;
   --radius: 0.65rem;
@@ -96,6 +96,11 @@
   --muted-border: hsl(var(--muted));
   --accent-border: hsl(var(--accent));
   --destructive-border: hsl(var(--destructive));
+}
+
+html[lang='ar'] {
+  --app-font-sans: 'Cairo', sans-serif;
+  --app-font-serif: 'Cairo', sans-serif;
 }
 
 @layer base {

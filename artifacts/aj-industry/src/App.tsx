@@ -209,7 +209,7 @@ function Home() {
   return <Shell>
     <main>
       <section className="relative isolate min-h-[100svh] overflow-hidden border-b border-border pt-[74px]" data-testid="section-hero">
-        <video className="absolute inset-0 -z-20 h-full w-full bg-[#071126] object-fill opacity-50" autoPlay muted loop playsInline poster="/media/hero-section-poster.jpg" aria-hidden="true">
+        <video className="absolute inset-0 -z-20 h-[110svh] w-full bg-[#071126] object-fill opacity-50" autoPlay muted loop playsInline poster="/media/hero-section-poster.jpg" aria-hidden="true">
           <source src="/media/hero-section.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,hsl(224_52%_6%/.78)_0%,hsl(224_52%_6%/.86)_48%,hsl(224_52%_6%/.78)_100%)]" />
