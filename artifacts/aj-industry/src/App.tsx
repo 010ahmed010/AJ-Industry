@@ -197,7 +197,7 @@ function Home() {
   const differentiators = content?.differentiators ?? [];
   return <Shell>
     <main>
-      <section className="relative isolate min-h-[716px] overflow-hidden border-b border-border pt-[74px]" data-testid="section-hero">
+      <section className="relative isolate min-h-[100svh] overflow-hidden border-b border-border pt-[74px]" data-testid="section-hero">
         <video className="absolute inset-0 -z-20 h-full w-full bg-[#071126] object-fill opacity-50" autoPlay muted loop playsInline poster="/media/hero-section-poster.jpg" aria-hidden="true">
           <source src="/media/hero-section.mp4" type="video/mp4" />
         </video>
@@ -205,7 +205,7 @@ function Home() {
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_52%_45%,hsl(211_100%_61%/.15),transparent_42%)]" />
         <div className="absolute inset-0 -z-10 grid-tech opacity-20" />
         <div className="scanline pointer-events-none absolute left-[20%] top-0 -z-10 h-1/3 w-px bg-primary/40" />
-        <div dir={ar(language) ? 'rtl' : 'ltr'} className="mx-auto flex min-h-[572px] max-w-7xl items-center justify-between gap-10 px-5 pb-28 pt-20 lg:px-8">
+        <div dir={ar(language) ? 'rtl' : 'ltr'} className="mx-auto flex min-h-[calc(100svh-74px)] max-w-7xl items-center justify-between gap-10 px-5 pb-28 pt-20 lg:px-8">
           <div className={`max-w-3xl ${ar(language) ? 'text-right' : 'text-left'}`}>
             <div className="animate-rise flex items-center gap-3 font-code text-[10px] tracking-[.16em] text-primary"><span className="size-2 bg-primary pulse-line" /> FIELD NOTE / 05 / ENGINEERING INTELLIGENCE</div>
             <h1 className="animate-rise delay-1 mt-6 font-display text-5xl font-bold leading-[1.04] tracking-[-.045em] text-balance sm:text-7xl lg:text-[76px]">
