@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: site
+    description: Public AJ-Industry content
+  - name: estimator
+    description: Public 3D printing estimator
+  - name: inquiries
+    description: Public service inquiries
 paths:
   /healthz:
     get:
@@ -24,6 +30,118 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /site/home:
+    get:
+      operationId: getHomeContent
+      tags: [site]
+      summary: Get homepage content
+      responses:
+        "200":
+          description: Homepage content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeContent"
+  /services:
+    get:
+      operationId: listServices
+      tags: [site]
+      summary: List public engineering services
+      responses:
+        "200":
+          description: Service summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceSummary"
+  /services/{slug}:
+    get:
+      operationId: getService
+      tags: [site]
+      summary: Get a service detail page
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Service details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceDetail"
+        "404":
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /materials:
+    get:
+      operationId: listMaterials
+      tags: [site]
+      summary: List 3D printing material guidance
+      responses:
+        "200":
+          description: Material selection matrix
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Material"
+  /print-estimates:
+    post:
+      operationId: createPrintEstimate
+      tags: [estimator]
+      summary: Estimate the cost and lead time of a printed model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrintEstimateInput"
+      responses:
+        "200":
+          description: Printing estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrintEstimate"
+        "400":
+          description: Invalid estimate input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /inquiries:
+    post:
+      operationId: createInquiry
+      tags: [inquiries]
+      summary: Send a public service inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InquiryInput"
+      responses:
+        "201":
+          description: Inquiry accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InquiryReceipt"
+        "400":
+          description: Invalid inquiry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +151,192 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    ServiceSummary:
+      type: object
+      properties:
+        slug:
+          type: string
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: string
+        descriptionEn:
+          type: string
+        category:
+          type: string
+        duration:
+          type: string
+        accent:
+          type: string
+      required: [slug, titleAr, titleEn, descriptionAr, descriptionEn, category, duration, accent]
+    ServiceDetail:
+      allOf:
+        - $ref: "#/components/schemas/ServiceSummary"
+        - type: object
+          properties:
+            highlightsAr:
+              type: array
+              items:
+                type: string
+            highlightsEn:
+              type: array
+              items:
+                type: string
+            workflowAr:
+              type: array
+              items:
+                type: string
+            workflowEn:
+              type: array
+              items:
+                type: string
+          required: [highlightsAr, highlightsEn, workflowAr, workflowEn]
+    Material:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        applicationAr:
+          type: string
+        applicationEn:
+          type: string
+        characteristicsAr:
+          type: string
+        characteristicsEn:
+          type: string
+        examplesAr:
+          type: string
+        examplesEn:
+          type: string
+        pricePerGram:
+          type: number
+        leadDays:
+          type: integer
+      required: [id, name, applicationAr, applicationEn, characteristicsAr, characteristicsEn, examplesAr, examplesEn, pricePerGram, leadDays]
+    HomeContent:
+      type: object
+      properties:
+        stats:
+          type: array
+          items:
+            $ref: "#/components/schemas/Stat"
+        designStages:
+          type: array
+          items:
+            $ref: "#/components/schemas/DesignStage"
+        differentiators:
+          type: array
+          items:
+            $ref: "#/components/schemas/Differentiator"
+      required: [stats, designStages, differentiators]
+    Stat:
+      type: object
+      properties:
+        value:
+          type: string
+        labelAr:
+          type: string
+        labelEn:
+          type: string
+      required: [value, labelAr, labelEn]
+    DesignStage:
+      type: object
+      properties:
+        number:
+          type: integer
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: string
+        descriptionEn:
+          type: string
+      required: [number, titleAr, titleEn, descriptionAr, descriptionEn]
+    Differentiator:
+      type: object
+      properties:
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: string
+        descriptionEn:
+          type: string
+      required: [titleAr, titleEn, descriptionAr, descriptionEn]
+    PrintEstimateInput:
+      type: object
+      properties:
+        weightGrams:
+          type: number
+          minimum: 1
+          maximum: 100000
+        materialId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000
+      required: [weightGrams, materialId, quantity]
+    PrintEstimate:
+      type: object
+      properties:
+        materialId:
+          type: string
+        quantity:
+          type: integer
+        weightGrams:
+          type: number
+        estimatedCost:
+          type: number
+        estimatedLeadDays:
+          type: integer
+        currency:
+          type: string
+        noteAr:
+          type: string
+        noteEn:
+          type: string
+      required: [materialId, quantity, weightGrams, estimatedCost, estimatedLeadDays, currency, noteAr, noteEn]
+    InquiryInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+        company:
+          type: string
+          maxLength: 160
+        serviceSlug:
+          type: string
+        message:
+          type: string
+          minLength: 10
+          maxLength: 2000
+      required: [name, email, message]
+    InquiryReceipt:
+      type: object
+      properties:
+        reference:
+          type: string
+        messageAr:
+          type: string
+        messageEn:
+          type: string
+      required: [reference, messageAr, messageEn]
 
