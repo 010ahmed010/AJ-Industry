@@ -1,0 +1,1 @@
+- [Service gallery content](gallery-content.md) — keep project galleries variable-length and API-backed so future admin editing does not require a UI refactor.

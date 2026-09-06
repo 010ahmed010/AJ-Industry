@@ -204,7 +204,25 @@ components:
               type: array
               items:
                 type: string
-          required: [highlightsAr, highlightsEn, workflowAr, workflowEn]
+            gallery:
+              type: array
+              items:
+                $ref: "#/components/schemas/ServiceGalleryItem"
+          required: [highlightsAr, highlightsEn, workflowAr, workflowEn, gallery]
+    ServiceGalleryItem:
+      type: object
+      properties:
+        image:
+          type: string
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: string
+        descriptionEn:
+          type: string
+      required: [image, titleAr, titleEn, descriptionAr, descriptionEn]
     Material:
       type: object
       properties:

@@ -24,11 +24,20 @@ export interface ServiceSummary {
   accent: string;
 }
 
+export interface ServiceGalleryItem {
+  image: string;
+  titleAr: string;
+  titleEn: string;
+  descriptionAr: string;
+  descriptionEn: string;
+}
+
 export type ServiceDetail = ServiceSummary & {
   highlightsAr: string[];
   highlightsEn: string[];
   workflowAr: string[];
   workflowEn: string[];
+  gallery: ServiceGalleryItem[];
 };
 
 export interface Material {

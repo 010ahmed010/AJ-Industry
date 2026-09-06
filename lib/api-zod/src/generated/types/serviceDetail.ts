@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ServiceGalleryItem } from './serviceGalleryItem';
 import type { ServiceSummary } from './serviceSummary';
 
 export type ServiceDetail = ServiceSummary & {
@@ -12,4 +13,5 @@ export type ServiceDetail = ServiceSummary & {
   highlightsEn: string[];
   workflowAr: string[];
   workflowEn: string[];
+  gallery: ServiceGalleryItem[];
 };

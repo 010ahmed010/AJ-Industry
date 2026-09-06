@@ -17,5 +17,6 @@ export * from './material';
 export * from './printEstimate';
 export * from './printEstimateInput';
 export * from './serviceDetail';
+export * from './serviceGalleryItem';
 export * from './serviceSummary';
 export * from './stat';

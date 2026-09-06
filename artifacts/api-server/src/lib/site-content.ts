@@ -87,6 +87,39 @@ export const homeContent: HomeContent = {
   differentiators,
 };
 
+const serviceGalleries: Record<string, ServiceDetail["gallery"]> = {
+  "packaging-filling-machines": [
+    { image: "/media/why-we-2.png", titleAr: "محطة تعبئة سيرفو مخصصة", titleEn: "Custom servo filling station", descriptionAr: "تجهيز خط تعبئة مدمج مع تحكم دقيق في الجرعة والحركة.", descriptionEn: "A compact filling line with precise dosing and motion control." },
+    { image: "/media/why-we-3.jpeg", titleAr: "وحدة فهرسة للعبوات", titleEn: "Container indexing unit", descriptionAr: "تصميم عملي يحافظ على ثبات المنتج أثناء الانتقال بين مراحل الخط.", descriptionEn: "A practical indexing system that keeps products stable between line stages." },
+    { image: "/media/why-we-1.jpeg", titleAr: "مراجعة نموذج خط الإنتاج", titleEn: "Production-line model review", descriptionAr: "محاكاة المسار والمساحات قبل اعتماد التصنيع والتركيب.", descriptionEn: "Route and footprint simulation before fabrication and installation approval." },
+  ],
+  "conveyor-systems": [
+    { image: "/media/why-we-2.png", titleAr: "ناقل وحدات صناعي", titleEn: "Industrial modular conveyor", descriptionAr: "مسار حركة مصمم ليتوافق مع مساحة التشغيل ونقاط التسليم.", descriptionEn: "A movement route designed around the operating footprint and handoff points." },
+    { image: "/media/why-we-3.jpeg", titleAr: "ناقل حلزوني مدمج", titleEn: "Compact spiral conveyor", descriptionAr: "استغلال الارتفاع لتقليل المساحة وتحسين انتقال المنتج.", descriptionEn: "Vertical movement that saves floor space and improves product transfer." },
+    { image: "/media/why-we-1.jpeg", titleAr: "هيكل ستانلس لخط تعبئة", titleEn: "Stainless frame for a filling line", descriptionAr: "هيكل قابل للصيانة ومجهز للبيئة الصناعية الرطبة.", descriptionEn: "A serviceable frame prepared for a demanding, wet industrial environment." },
+  ],
+  "cad-modeling-simulation": [
+    { image: "/media/why-we-1.jpeg", titleAr: "تجميع CAD قابل للمراجعة", titleEn: "Review-ready CAD assembly", descriptionAr: "نموذج رقمي يوضح العلاقة بين الأجزاء قبل تصنيع النموذج الأولي.", descriptionEn: "A digital model clarifying part relationships before the first prototype." },
+    { image: "/media/why-we-3.jpeg", titleAr: "محاكاة الحركة والتداخل", titleEn: "Motion and interference study", descriptionAr: "اختبار الحركة ونقاط التداخل لتقليل إعادة العمل في المصنع.", descriptionEn: "Motion and interference testing to reduce rework on the factory floor." },
+    { image: "/media/why-we-2.png", titleAr: "حزمة رسومات للتصنيع", titleEn: "Production drawing package", descriptionAr: "رسومات منظمة وقائمة مكونات تساعد فريق التصنيع على البدء بثقة.", descriptionEn: "Organized drawings and a BOM that let the fabrication team start with confidence." },
+  ],
+  "reverse-engineering-upgrades": [
+    { image: "/media/why-we-1.jpeg", titleAr: "إعادة بناء قطعة قديمة", titleEn: "Legacy part reconstruction", descriptionAr: "تحويل القياسات والعينة إلى نموذج جديد قابل للتصنيع.", descriptionEn: "Turning measurements and a sample into a manufacturable new model." },
+    { image: "/media/why-we-2.png", titleAr: "ترقية آلية الحركة", titleEn: "Mechanism upgrade", descriptionAr: "تحسين الحركة والوصول والصيانة دون تغيير كامل للآلة.", descriptionEn: "Improving motion, access, and serviceability without replacing the whole machine." },
+    { image: "/media/why-we-3.jpeg", titleAr: "فحص القطعة بعد التصنيع", titleEn: "Post-machining inspection", descriptionAr: "مراجعة الأبعاد والملاءمة قبل إعادة القطعة إلى خط الإنتاج.", descriptionEn: "Dimensional and fit review before returning the part to production." },
+  ],
+  "gears-pulleys": [
+    { image: "/media/why-we-3.jpeg", titleAr: "طقم مسننات دقيق", titleEn: "Precision gear set", descriptionAr: "تفاوتات محسوبة لتعشيق هادئ وعمر تشغيل أطول.", descriptionEn: "Controlled tolerances for quiet meshing and longer service life." },
+    { image: "/media/why-we-2.png", titleAr: "بكرة توقيت صناعية", titleEn: "Industrial timing pulley", descriptionAr: "قطعة مصممة حول الحمل، المسافة، وسرعة الحركة المطلوبة.", descriptionEn: "A pulley designed around the required load, distance, and speed." },
+    { image: "/media/why-we-1.jpeg", titleAr: "مراجعة التصميم قبل التشغيل", titleEn: "Design review before machining", descriptionAr: "تأكيد الموديول والخلوص ونقاط التثبيت قبل تجهيز ملفات التشغيل.", descriptionEn: "Module, backlash, and mounting checks before preparing machining files." },
+  ],
+  "obsolete-spare-parts": [
+    { image: "/media/why-we-3.jpeg", titleAr: "بديل قطعة غيار منقرضة", titleEn: "Replacement for a discontinued part", descriptionAr: "إعادة إنتاج قطعة لم تعد متاحة مع الحفاظ على الملاءمة الأصلية.", descriptionEn: "Reproducing an unavailable part while preserving the original fit." },
+    { image: "/media/why-we-1.jpeg", titleAr: "التقاط أبعاد قطعة مكسورة", titleEn: "Broken-part dimensional capture", descriptionAr: "استخراج الأبعاد المهمة من العينة لتحديد سبب الفشل.", descriptionEn: "Capturing critical dimensions from a sample to understand the failure." },
+    { image: "/media/why-we-2.png", titleAr: "اختبار الملاءمة على الآلة", titleEn: "Machine fit verification", descriptionAr: "تجربة البديل على النظام قبل التسليم النهائي.", descriptionEn: "Testing the replacement on the system before final handover." },
+  ],
+};
+
 export const services: ServiceDetail[] = [
   {
     slug: "packaging-filling-machines",
@@ -97,6 +130,7 @@ export const services: ServiceDetail[] = [
     category: "Machine design",
     duration: "3–6 weeks",
     accent: "cyan",
+    gallery: serviceGalleries["packaging-filling-machines"],
     highlightsAr: [
       "نمذجة ثلاثية الأبعاد ومحاكاة الحركة قبل التصنيع",
       "أنظمة تعبئة دقيقة للسوائل والمواد الجافة",
@@ -133,6 +167,7 @@ export const services: ServiceDetail[] = [
     category: "Machine design",
     duration: "2–5 weeks",
     accent: "blue",
+    gallery: serviceGalleries["conveyor-systems"],
     highlightsAr: [
       "دراسة مسار الحركة وأبعاد الموقع",
       "حلول رأسية وحلزونية لاستغلال الارتفاع",
@@ -169,6 +204,7 @@ export const services: ServiceDetail[] = [
     category: "Digital engineering",
     duration: "1–2 weeks",
     accent: "violet",
+    gallery: serviceGalleries["cad-modeling-simulation"],
     highlightsAr: [
       "نماذج CAD دقيقة للأجزاء والتجميعات",
       "تحليل إجهاد واختبار متانة الأحمال",
@@ -205,6 +241,7 @@ export const services: ServiceDetail[] = [
     category: "Machine improvement",
     duration: "1–3 weeks",
     accent: "amber",
+    gallery: serviceGalleries["reverse-engineering-upgrades"],
     highlightsAr: [
       "رفع أبعاد القطع وإعادة نمذجتها بدقة",
       "تصنيع بدائل للأجزاء النادرة أو المتوقفة",
@@ -241,6 +278,7 @@ export const services: ServiceDetail[] = [
     category: "Precision parts",
     duration: "3 days–2 weeks",
     accent: "green",
+    gallery: serviceGalleries["gears-pulleys"],
     highlightsAr: [
       "مسننات مستقيمة وحلزونية ومخروطية ودودية",
       "بكرات توقيت وبكرات سيور بدقة عالية",
@@ -277,6 +315,7 @@ export const services: ServiceDetail[] = [
     category: "Precision parts",
     duration: "3 days–2 weeks",
     accent: "rose",
+    gallery: serviceGalleries["obsolete-spare-parts"],
     highlightsAr: [
       "إعادة بناء القطع المتآكلة أو المكسورة",
       "بدائل للآلات التي توقف دعمها من المصنع",

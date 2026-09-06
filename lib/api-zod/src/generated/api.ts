@@ -78,7 +78,14 @@ export const GetServiceResponse = zod.object({
   "highlightsAr": zod.array(zod.string()),
   "highlightsEn": zod.array(zod.string()),
   "workflowAr": zod.array(zod.string()),
-  "workflowEn": zod.array(zod.string())
+  "workflowEn": zod.array(zod.string()),
+  "gallery": zod.array(zod.object({
+  "image": zod.string(),
+  "titleAr": zod.string(),
+  "titleEn": zod.string(),
+  "descriptionAr": zod.string(),
+  "descriptionEn": zod.string()
+}))
 }))
 
 

@@ -9,6 +9,7 @@ import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } f
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
 import ContactPage from '@/pages/contact';
+import { ServiceDetailPage as StructuredServiceDetailPage } from '@/pages/PublicSidePages';
 
 const queryClient = new QueryClient();
 
@@ -394,7 +395,7 @@ function MaterialsPage() {
 function Router() {
   const [location] = useLocation();
   const { language } = useLanguage();
-  return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={Home} /><Route path="/services/:slug" component={ServiceDetailPage} /><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route><Route component={NotFound} /></Switch></ErrorBoundary>;
+  return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={Home} /><Route path="/services/:slug">{() => <Shell><StructuredServiceDetailPage language={language} /></Shell>}</Route><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route><Route component={NotFound} /></Switch></ErrorBoundary>;
 }
 
 function App() {
