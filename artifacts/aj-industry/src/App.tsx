@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Menu, MoveUpRi
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
+import ContactPage from '@/pages/contact';
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ function Header() {
     { href: '/#services', ar: 'الخدمات', en: 'Services' },
     { href: '/print-3d', ar: 'الطباعة ثلاثية الأبعاد', en: '3D Printing' },
     { href: '/materials', ar: 'المواد', en: 'Materials' },
+    { href: '/contact', ar: 'تواصل معنا', en: 'Contact' },
   ];
   return <header className="fixed inset-x-0 top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-xl" data-testid="site-header">
     <div className="mx-auto flex h-[74px] max-w-7xl items-center justify-between px-5 lg:px-8">
@@ -374,7 +376,8 @@ function MaterialsPage() {
 
 function Router() {
   const [location] = useLocation();
-  return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={Home} /><Route path="/services/:slug" component={ServiceDetailPage} /><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route component={NotFound} /></Switch></ErrorBoundary>;
+  const { language } = useLanguage();
+  return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={Home} /><Route path="/services/:slug" component={ServiceDetailPage} /><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route><Route component={NotFound} /></Switch></ErrorBoundary>;
 }
 
 function App() {
