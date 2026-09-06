@@ -4,7 +4,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCreateInquiry, useCreatePrintEstimate, useGetHomeContent, useGetService, useListMaterials, useListServices } from '@workspace/api-client-react';
-import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Menu, MoveUpRight, Send, Sparkles, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Sparkles, X, Zap } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
@@ -303,7 +303,24 @@ function Home() {
         <div className="relative mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 md:flex-row md:items-center lg:px-8"><div><Eyebrow>RAPID PROTOTYPING / 04</Eyebrow><h2 className="max-w-2xl font-display text-3xl font-bold sm:text-5xl">{display(language, 'الفكرة لا تحتاج أن تنتظر.', 'Your idea does not need to wait.')}</h2><p className="mt-4 max-w-xl text-muted-foreground">{display(language, 'قدّر تكلفة نموذجك، اختر المادة المناسبة، وابدأ دورة تصنيع قصيرة اليوم.', 'Estimate your model, choose the right material, and start a short fabrication cycle today.')}</p></div><Link href="/print-3d" className="flex shrink-0 items-center gap-3 bg-primary px-6 py-4 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-1" data-testid="link-print-callout">{display(language, 'احسب تكلفة الطباعة', 'Estimate a print')} <MoveUpRight className="size-4" /></Link></div>
       </section>
 
-      <section id="contact" className="mx-auto max-w-7xl px-5 py-24 lg:px-8" data-testid="section-contact"><div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr]"><div><SectionHeading eyebrow="CONTACT / 05" title={display(language, 'لنضع المشكلة على الطاولة.', 'Put the problem on the table.')} body={display(language, 'أرسل لنا السياق. سنعود إليك بأسئلة أفضل، وخطوة تالية واضحة.', 'Send us the context. We will come back with better questions and a clear next step.')} /><div className="mt-10 grid gap-4 font-code text-xs text-muted-foreground"><div className="flex gap-3"><span className="text-primary">01</span><span>hello@aj-industry.com</span></div><div className="flex gap-3"><span className="text-primary">02</span><span>+966 50 000 0000</span></div><div className="flex gap-3"><span className="text-primary">03</span><span>Riyadh / Saudi Arabia</span></div></div></div><div className="border border-border bg-card p-6 sm:p-8"><InquiryForm /></div></div></section>
+      <section id="contact" className="mx-auto max-w-7xl px-5 py-24 lg:px-8" data-testid="section-contact"><div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr]"><div><SectionHeading eyebrow="CONTACT / 05" title={display(language, 'لنضع المشكلة على الطاولة.', 'Put the problem on the table.')} body={display(language, 'أرسل لنا السياق. سنعود إليك بأسئلة أفضل، وخطوة تالية واضحة.', 'Send us the context. We will come back with better questions and a clear next step.')} /><div className="mt-10 grid gap-3">
+        <a href="mailto:hello@aj-industry.com" className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-email">
+          <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><Mail className="size-4" /></span>
+          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">EMAIL / 01</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">hello@aj-industry.com</span></span>
+          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
+        </a>
+        <a href="tel:+966500000000" className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-phone">
+          <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><Phone className="size-4" /></span>
+          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">PHONE / 02</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">+966 50 000 0000</span></span>
+          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
+        </a>
+        <a href="https://wa.me/966500000000" target="_blank" rel="noreferrer" className="group flex items-center gap-3 border border-accent/35 bg-accent/10 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent/70 hover:bg-accent/15" data-testid="button-home-contact-whatsapp">
+          <span className="grid size-9 shrink-0 place-items-center border border-accent/40 bg-accent/10 text-accent"><MessageCircle className="size-4" /></span>
+          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">WHATSAPP / 03</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">+966 50 000 0000</span></span>
+          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-accent" />
+        </a>
+        <div className="flex gap-3 pt-2 font-code text-xs text-muted-foreground"><span className="text-primary">04</span><span>{display(language, 'الرياض / المملكة العربية السعودية', 'Riyadh / Saudi Arabia')}</span></div>
+      </div></div><div className="border border-border bg-card p-6 sm:p-8"><InquiryForm /></div></div></section>
     </main>
   </Shell>;
 }
