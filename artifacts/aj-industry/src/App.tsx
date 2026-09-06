@@ -8,8 +8,7 @@ import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Mail, Menu, Me
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
-import ContactPage from '@/pages/contact';
-import { ServiceDetailPage as StructuredServiceDetailPage } from '@/pages/PublicSidePages';
+import { ContactPage, ServiceDetailPage as StructuredServiceDetailPage } from '@/pages/PublicSidePages';
 
 const queryClient = new QueryClient();
 
