@@ -1,1 +1,2 @@
 - [Service gallery content](gallery-content.md) — keep project galleries variable-length and API-backed so future admin editing does not require a UI refactor.
+- [Client dashboard scope](client-dashboard-scope.md) — portal UI is functional now; auth, persisted client data, files, and live progress are the next server-backed layer.
