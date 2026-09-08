@@ -16,6 +16,8 @@ tags:
     description: Public 3D printing estimator
   - name: inquiries
     description: Public service inquiries
+  - name: client
+    description: Authenticated client workspace
 paths:
   /healthz:
     get:
@@ -148,7 +150,121 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /client/profile:
+    get:
+      operationId: getClientProfile
+      tags: [client]
+      summary: Get the authenticated client's profile
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Client profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientProfile"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateClientProfile
+      tags: [client]
+      summary: Update the authenticated client's profile
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientProfileInput"
+      responses:
+        "200":
+          description: Updated client profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientProfile"
+        "400":
+          description: Invalid profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /client/overview:
+    get:
+      operationId: getClientOverview
+      tags: [client]
+      summary: Get the authenticated client's requests and activity
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Client overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientOverview"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /client/print-requests:
+    post:
+      operationId: createClientPrintRequest
+      tags: [client]
+      summary: Create an authenticated 3D printing request
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientPrintRequestInput"
+      responses:
+        "201":
+          description: Persisted client request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientRequest"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Request service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
+  securitySchemes:
+    clerkSession:
+      type: http
+      scheme: bearer
+      bearerFormat: Clerk session
   schemas:
     HealthStatus:
       type: object
@@ -163,6 +279,108 @@ components:
         error:
           type: string
       required: [error]
+    ClientProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        company:
+          type: string
+      required: [userId, username, email, name, company]
+    UpdateClientProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        company:
+          type: string
+          maxLength: 160
+      required: [name, company]
+    ClientRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+        kind:
+          type: string
+          enum: [print]
+        projectName:
+          type: string
+        serviceSlug:
+          type: string
+        status:
+          type: string
+          enum: [submitted, reviewing, quoted, scheduled, completed]
+        statusAr:
+          type: string
+        statusEn:
+          type: string
+        material:
+          type: string
+        finish:
+          type: string
+        quantity:
+          type: integer
+        timeline:
+          type: string
+        notes:
+          type: string
+        fileName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, reference, kind, projectName, serviceSlug, status, statusAr, statusEn, material, finish, quantity, timeline, notes, createdAt]
+    ClientOverview:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/ClientProfile"
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientRequest"
+      required: [profile, requests]
+    CreateClientPrintRequestInput:
+      type: object
+      properties:
+        projectName:
+          type: string
+          minLength: 2
+          maxLength: 160
+        material:
+          type: string
+          minLength: 1
+          maxLength: 80
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000
+        finish:
+          type: string
+          minLength: 1
+          maxLength: 80
+        timeline:
+          type: string
+          minLength: 1
+          maxLength: 80
+        notes:
+          type: string
+          maxLength: 3000
+        fileName:
+          type: string
+          maxLength: 255
+      required: [projectName, material, quantity, finish, timeline, notes]
     ServiceSummary:
       type: object
       properties:

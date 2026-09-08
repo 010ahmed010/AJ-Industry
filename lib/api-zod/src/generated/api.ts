@@ -162,3 +162,119 @@ export const CreateInquiryResponse = zod.object({
 })
 
 
+/**
+ * @summary Get the authenticated client's profile
+ */
+export const GetClientProfileResponse = zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "company": zod.string()
+})
+
+
+/**
+ * @summary Update the authenticated client's profile
+ */
+export const updateClientProfileBodyNameMin = 2;
+export const updateClientProfileBodyNameMax = 120;
+
+export const updateClientProfileBodyCompanyMax = 160;
+
+
+
+export const UpdateClientProfileBody = zod.object({
+  "name": zod.string().min(updateClientProfileBodyNameMin).max(updateClientProfileBodyNameMax),
+  "company": zod.string().max(updateClientProfileBodyCompanyMax)
+})
+
+export const UpdateClientProfileResponse = zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "company": zod.string()
+})
+
+
+/**
+ * @summary Get the authenticated client's requests and activity
+ */
+export const GetClientOverviewResponse = zod.object({
+  "profile": zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "company": zod.string()
+}),
+  "requests": zod.array(zod.object({
+  "id": zod.string(),
+  "reference": zod.string(),
+  "kind": zod.enum(['print']),
+  "projectName": zod.string(),
+  "serviceSlug": zod.string(),
+  "status": zod.enum(['submitted', 'reviewing', 'quoted', 'scheduled', 'completed']),
+  "statusAr": zod.string(),
+  "statusEn": zod.string(),
+  "material": zod.string(),
+  "finish": zod.string(),
+  "quantity": zod.number().int(),
+  "timeline": zod.string(),
+  "notes": zod.string(),
+  "fileName": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create an authenticated 3D printing request
+ */
+export const createClientPrintRequestBodyProjectNameMin = 2;
+export const createClientPrintRequestBodyProjectNameMax = 160;
+
+export const createClientPrintRequestBodyMaterialMax = 80;
+
+export const createClientPrintRequestBodyQuantityMax = 1000;
+
+export const createClientPrintRequestBodyFinishMax = 80;
+
+export const createClientPrintRequestBodyTimelineMax = 80;
+
+export const createClientPrintRequestBodyNotesMax = 3000;
+
+export const createClientPrintRequestBodyFileNameMax = 255;
+
+
+
+export const CreateClientPrintRequestBody = zod.object({
+  "projectName": zod.string().min(createClientPrintRequestBodyProjectNameMin).max(createClientPrintRequestBodyProjectNameMax),
+  "material": zod.string().min(1).max(createClientPrintRequestBodyMaterialMax),
+  "quantity": zod.number().int().min(1).max(createClientPrintRequestBodyQuantityMax),
+  "finish": zod.string().min(1).max(createClientPrintRequestBodyFinishMax),
+  "timeline": zod.string().min(1).max(createClientPrintRequestBodyTimelineMax),
+  "notes": zod.string().max(createClientPrintRequestBodyNotesMax),
+  "fileName": zod.string().max(createClientPrintRequestBodyFileNameMax).optional()
+})
+
+export const CreateClientPrintRequestResponse = zod.object({
+  "id": zod.string(),
+  "reference": zod.string(),
+  "kind": zod.enum(['print']),
+  "projectName": zod.string(),
+  "serviceSlug": zod.string(),
+  "status": zod.enum(['submitted', 'reviewing', 'quoted', 'scheduled', 'completed']),
+  "statusAr": zod.string(),
+  "statusEn": zod.string(),
+  "material": zod.string(),
+  "finish": zod.string(),
+  "quantity": zod.number().int(),
+  "timeline": zod.string(),
+  "notes": zod.string(),
+  "fileName": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+

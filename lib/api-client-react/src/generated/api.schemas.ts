@@ -13,6 +13,97 @@ export interface Error {
   error: string;
 }
 
+export interface ClientProfile {
+  userId: string;
+  username: string;
+  email: string;
+  name: string;
+  company: string;
+}
+
+export interface UpdateClientProfileInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /** @maxLength 160 */
+  company: string;
+}
+
+export type ClientRequestKind = typeof ClientRequestKind[keyof typeof ClientRequestKind];
+
+
+export const ClientRequestKind = {
+  print: 'print',
+} as const;
+
+export type ClientRequestStatus = typeof ClientRequestStatus[keyof typeof ClientRequestStatus];
+
+
+export const ClientRequestStatus = {
+  submitted: 'submitted',
+  reviewing: 'reviewing',
+  quoted: 'quoted',
+  scheduled: 'scheduled',
+  completed: 'completed',
+} as const;
+
+export interface ClientRequest {
+  id: string;
+  reference: string;
+  kind: ClientRequestKind;
+  projectName: string;
+  serviceSlug: string;
+  status: ClientRequestStatus;
+  statusAr: string;
+  statusEn: string;
+  material: string;
+  finish: string;
+  quantity: number;
+  timeline: string;
+  notes: string;
+  fileName?: string;
+  createdAt: string;
+}
+
+export interface ClientOverview {
+  profile: ClientProfile;
+  requests: ClientRequest[];
+}
+
+export interface CreateClientPrintRequestInput {
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  projectName: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  material: string;
+  /**
+     * @minimum 1
+     * @maximum 1000
+     */
+  quantity: number;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  finish: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  timeline: string;
+  /** @maxLength 3000 */
+  notes: string;
+  /** @maxLength 255 */
+  fileName?: string;
+}
+
 export interface ServiceSummary {
   slug: string;
   titleAr: string;

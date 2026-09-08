@@ -1,0 +1,8 @@
+<svg width="240" height="64" viewBox="0 0 240 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="1" width="62" height="62" fill="#101F37" stroke="#3D9BFF" stroke-width="2"/>
+  <rect x="11" y="11" width="42" height="42" stroke="#3D9BFF" stroke-opacity=".35"/>
+  <path d="M19 42 27.5 22H34l8.5 20h-5.7l-1.7-4.3H25.9L24.2 42H19Zm8.6-8.6h3.9l-1.9-5.2-2 5.2Z" fill="#3D9BFF"/>
+  <path d="M47 22h-5.2v20H47V22Z" fill="#EDF4FF"/>
+  <text x="76" y="30" fill="#EDF4FF" font-family="Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="1.2">AJ—INDUSTRY</text>
+  <text x="77" y="47" fill="#9AABC4" font-family="monospace" font-size="8" letter-spacing="2.1">ENGINEERING STUDIO</text>
+</svg>

@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './clientOverview';
+export * from './clientProfile';
+export * from './clientRequest';
+export * from './clientRequestKind';
+export * from './clientRequestStatus';
+export * from './createClientPrintRequestInput';
 export * from './designStage';
 export * from './differentiator';
 export * from './error';
@@ -20,3 +26,4 @@ export * from './serviceDetail';
 export * from './serviceGalleryItem';
 export * from './serviceSummary';
 export * from './stat';
+export * from './updateClientProfileInput';

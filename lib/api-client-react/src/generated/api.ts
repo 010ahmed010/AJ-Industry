@@ -20,6 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ClientOverview,
+  ClientProfile,
+  ClientRequest,
+  CreateClientPrintRequestInput,
   Error,
   HealthStatus,
   HomeContent,
@@ -29,7 +33,8 @@ import type {
   PrintEstimate,
   PrintEstimateInput,
   ServiceDetail,
-  ServiceSummary
+  ServiceSummary,
+  UpdateClientProfileInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -585,5 +590,301 @@ export const useCreateInquiry = <TError = ErrorType<Error>,
         TContext
       > => {
       return useMutation(getCreateInquiryMutationOptions(options));
+    }
+
+export const getGetClientProfileUrl = () => {
+
+
+
+
+  return `/api/client/profile`
+}
+
+/**
+ * @summary Get the authenticated client's profile
+ */
+export const getClientProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<ClientProfile> => {
+
+  return customFetch<ClientProfile>(getGetClientProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClientProfileQueryKey = () => {
+    return [
+    `/api/client/profile`
+    ] as const;
+    }
+
+
+export const getGetClientProfileQueryOptions = <TData = Awaited<ReturnType<typeof getClientProfile>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClientProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientProfile>>> = ({ signal }) => getClientProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClientProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getClientProfile>>>
+export type GetClientProfileQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Get the authenticated client's profile
+ */
+
+export function useGetClientProfile<TData = Awaited<ReturnType<typeof getClientProfile>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClientProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateClientProfileUrl = () => {
+
+
+
+
+  return `/api/client/profile`
+}
+
+/**
+ * @summary Update the authenticated client's profile
+ */
+export const updateClientProfile = async (updateClientProfileInput: UpdateClientProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<ClientProfile> => {
+
+  return customFetch<ClientProfile>(getUpdateClientProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateClientProfileInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateClientProfileMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClientProfile>>, TError,{data: BodyType<UpdateClientProfileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClientProfile>>, TError,{data: BodyType<UpdateClientProfileInput>}, TContext> => {
+
+const mutationKey = ['updateClientProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClientProfile>>, {data: BodyType<UpdateClientProfileInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateClientProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClientProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateClientProfile>>>
+    export type UpdateClientProfileMutationBody = BodyType<UpdateClientProfileInput>
+    export type UpdateClientProfileMutationError = ErrorType<Error>
+
+    /**
+ * @summary Update the authenticated client's profile
+ */
+export const useUpdateClientProfile = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClientProfile>>, TError,{data: BodyType<UpdateClientProfileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateClientProfile>>,
+        TError,
+        {data: BodyType<UpdateClientProfileInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateClientProfileMutationOptions(options));
+    }
+
+export const getGetClientOverviewUrl = () => {
+
+
+
+
+  return `/api/client/overview`
+}
+
+/**
+ * @summary Get the authenticated client's requests and activity
+ */
+export const getClientOverview = async ( options?: Parameters<typeof customFetch>[1]): Promise<ClientOverview> => {
+
+  return customFetch<ClientOverview>(getGetClientOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClientOverviewQueryKey = () => {
+    return [
+    `/api/client/overview`
+    ] as const;
+    }
+
+
+export const getGetClientOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getClientOverview>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClientOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientOverview>>> = ({ signal }) => getClientOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClientOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getClientOverview>>>
+export type GetClientOverviewQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Get the authenticated client's requests and activity
+ */
+
+export function useGetClientOverview<TData = Awaited<ReturnType<typeof getClientOverview>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClientOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateClientPrintRequestUrl = () => {
+
+
+
+
+  return `/api/client/print-requests`
+}
+
+/**
+ * @summary Create an authenticated 3D printing request
+ */
+export const createClientPrintRequest = async (createClientPrintRequestInput: CreateClientPrintRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<ClientRequest> => {
+
+  return customFetch<ClientRequest>(getCreateClientPrintRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createClientPrintRequestInput)
+  }
+);}
+
+
+
+
+
+export const getCreateClientPrintRequestMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClientPrintRequest>>, TError,{data: BodyType<CreateClientPrintRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClientPrintRequest>>, TError,{data: BodyType<CreateClientPrintRequestInput>}, TContext> => {
+
+const mutationKey = ['createClientPrintRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClientPrintRequest>>, {data: BodyType<CreateClientPrintRequestInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createClientPrintRequest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClientPrintRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createClientPrintRequest>>>
+    export type CreateClientPrintRequestMutationBody = BodyType<CreateClientPrintRequestInput>
+    export type CreateClientPrintRequestMutationError = ErrorType<Error>
+
+    /**
+ * @summary Create an authenticated 3D printing request
+ */
+export const useCreateClientPrintRequest = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClientPrintRequest>>, TError,{data: BodyType<CreateClientPrintRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClientPrintRequest>>,
+        TError,
+        {data: BodyType<CreateClientPrintRequestInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClientPrintRequestMutationOptions(options));
     }
 

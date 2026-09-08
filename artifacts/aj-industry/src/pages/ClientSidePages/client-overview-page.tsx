@@ -1,116 +1,30 @@
-import { ArrowUpRight, BriefcaseBusiness, CalendarDays, ChevronLeft, CircleCheck, Clock3, FileText, Gauge, MessageCircle, MoveUpRight, PackageCheck, Printer, SlidersHorizontal, UsersRound, Wrench } from 'lucide-react';
+import { Activity, CircleCheck, Clock3, FileText, Gauge, Printer, RefreshCw } from 'lucide-react';
 import { Link } from 'wouter';
-import {
-  clientText,
-  Metric,
-  PageIntro,
-  Panel,
-  PanelHeader,
-  ProgressBar,
-  QuickLink,
-  Tag,
-  useClientDashboard,
-} from './client-dashboard-shell';
+import { clientText, Metric, PageIntro, Panel, PanelHeader, QuickLink, Tag, useClientDashboard, type ClientRequest } from './client-dashboard-shell';
+
+function requestStatus(language: 'ar' | 'en', request: ClientRequest) {
+  return language === 'ar' ? request.statusAr : request.statusEn;
+}
+
+function requestDate(value: string | Date, language: 'ar' | 'en') {
+  const date = new Date(value);
+  return new Intl.DateTimeFormat(language === 'ar' ? 'ar-SA' : 'en-US', { dateStyle: 'medium' }).format(date);
+}
 
 export function ClientOverviewPage() {
-  const { language, profile } = useClientDashboard();
-  const projectName = clientText(language, 'حامل مضخة التبريد — نسخة وظيفية', 'Cooling Pump Bracket — functional build');
-  const activity = [
-    { code: '14:32', title: clientText(language, 'تم اعتماد ملف STEP للمراجعة', 'STEP file approved for review'), detail: clientText(language, 'بواسطة فريق AJ الهندسي', 'By AJ engineering team'), icon: FileText },
-    { code: 'أمس', title: clientText(language, 'تم تحديث مواصفات المادة', 'Material specification updated'), detail: 'PETG-CF / 0.20 mm', icon: Wrench },
-    { code: '12 JUN', title: clientText(language, 'إيداع المشروع في قائمة الطباعة', 'Project queued for print'), detail: clientText(language, 'موعد التسليم المتوقع 18 يونيو', 'Estimated delivery 18 June'), icon: PackageCheck },
-  ];
-
-  return (
-    <div className="mx-auto max-w-[1480px]">
-      <PageIntro
-        code="CLIENT / 01 — OVERVIEW"
-        title={clientText(language, `صباح الخير، ${profile.name.split(' ')[0]}`, `Good morning, ${profile.name.split(' ')[0]}`)}
-        description={clientText(language, 'مساحة تشغيل مختصرة لمشاريعك، القرارات القادمة، وخط الدعم الهندسي المباشر.', 'A concise operating view of your projects, next decisions, and direct engineering support.')}
-        action={<Tag tone="green">{clientText(language, 'حساب نشط', 'ACCOUNT ACTIVE')} / SA-042</Tag>}
-      />
-
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="ACTIVE PROJECT" value="01" note={clientText(language, 'مشروع قيد التنفيذ', 'Project in progress')} icon={Gauge} />
-        <Metric label="NEXT MILESTONE" value="18 JUN" note={clientText(language, 'تسليم القطعة الوظيفية', 'Functional build delivery')} icon={CalendarDays} />
-        <Metric label="RESPONSE WINDOW" value="04 H" note={clientText(language, 'متوسط رد فريق الدعم', 'Average support response')} icon={Clock3} />
-        <Metric label="ACCOUNT SIGNAL" value="NOMINAL" note={clientText(language, 'لا توجد مهام متأخرة', 'No overdue actions')} icon={CircleCheck} />
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.45fr_.8fr]">
-        <Panel>
-          <PanelHeader eyebrow="PROJECT / AJ-3DP-042" title={clientText(language, 'مشروعك النشط', 'Your active project')} action={<Tag>{clientText(language, 'قيد التنفيذ', 'IN PRODUCTION')}</Tag>} />
-          <div className="p-5 sm:p-6">
-            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
-              <div>
-                <p className="font-display text-2xl font-bold">{projectName}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{clientText(language, 'تطوير نموذج قابل للطباعة والاختبار داخل حجرة المحرك.', 'Print-ready development and test fit inside the engine bay.')}</p>
-              </div>
-              <span className="font-code text-xs text-primary">68 / 100</span>
-            </div>
-            <div className="mt-7"><ProgressBar value={68} /></div>
-            <div className="mt-3 flex justify-between font-code text-[9px] text-muted-foreground"><span>{clientText(language, 'بدأ في 06 يونيو', 'STARTED 06 JUN')}</span><span>{clientText(language, 'المرحلة 03 من 05', 'STAGE 03 OF 05')}</span></div>
-            <div className="mt-8 grid gap-3 sm:grid-cols-5">
-              {[
-                clientText(language, 'استلام الملف', 'Brief received'),
-                clientText(language, 'مراجعة CAD', 'CAD review'),
-                clientText(language, 'اعتماد المادة', 'Material lock'),
-                clientText(language, 'الطباعة', 'Print run'),
-                clientText(language, 'التسليم', 'Delivery'),
-              ].map((item, index) => (
-                <div key={item} className={`border-t pt-3 ${index < 3 ? 'border-primary' : 'border-border'}`}>
-                  <div className={`mb-2 size-2 ${index < 3 ? 'bg-primary' : 'border border-border bg-background'}`} />
-                  <p className={`text-xs leading-5 ${index < 3 ? 'text-foreground' : 'text-muted-foreground'}`}>{item}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-7 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><span className="size-1.5 bg-accent" />{clientText(language, 'آخر تحديث منذ 18 دقيقة', 'Last update 18 minutes ago')}</div>
-              <Link href="/client/printing" className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">{clientText(language, 'فتح سجل المشروع', 'Open project log')} <ArrowUpRight className="size-4" /></Link>
-            </div>
-          </div>
-        </Panel>
-
-        <Panel>
-          <PanelHeader eyebrow="NEXT ACTION / 01" title={clientText(language, 'خطوتك القادمة', 'Your next action')} />
-          <div className="p-5 sm:p-6">
-            <div className="flex items-start gap-4">
-              <span className="grid size-11 shrink-0 place-items-center border border-primary/35 bg-primary/10 text-primary"><MessageCircle className="size-5" /></span>
-              <div><Tag tone="amber">{clientText(language, 'بانتظارك', 'AWAITING YOU')}</Tag><h3 className="mt-4 font-display text-xl font-bold">{clientText(language, 'اعتماد اتجاه الخامة', 'Confirm material direction')}</h3><p className="mt-2 text-sm leading-7 text-muted-foreground">{clientText(language, 'راجع اختبار PETG-CF وأرسل اعتمادك قبل بدء دورة الطباعة.', 'Review the PETG-CF test and confirm before the print run begins.')}</p></div>
-            </div>
-            <Link href="/client/printing" className="mt-7 flex h-11 items-center justify-center gap-2 bg-primary text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5">{clientText(language, 'مراجعة المشروع', 'Review project')} <MoveUpRight className="size-4" /></Link>
-            <p className="mt-4 text-center font-code text-[9px] text-muted-foreground">{clientText(language, 'الموعد المقترح: 15 يونيو، 16:00', 'Suggested by 15 June, 16:00')}</p>
-          </div>
-        </Panel>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-[.95fr_1.05fr]">
-        <Panel>
-          <PanelHeader eyebrow="ACTIVITY / LIVE LOG" title={clientText(language, 'النشاط الأخير', 'Recent activity')} action={<Link href="/client/printing" className="font-code text-[9px] text-primary hover:underline">{clientText(language, 'كل السجل', 'VIEW LOG')}</Link>} />
-          <div className="divide-y divide-border/70">
-            {activity.map((item) => {
-              const Icon = item.icon;
-              return <div key={item.code} className="flex gap-4 px-5 py-4 sm:px-6"><span className="mt-1 grid size-8 shrink-0 place-items-center border border-border bg-secondary/50"><Icon className="size-3.5 text-primary" /></span><div className="min-w-0 flex-1"><div className="flex flex-col justify-between gap-1 sm:flex-row"><p className="text-sm font-semibold">{item.title}</p><span className="font-code text-[9px] text-muted-foreground">{item.code}</span></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div></div>;
-            })}
-          </div>
-        </Panel>
-        <Panel>
-          <PanelHeader eyebrow="ACCESS / SHORTCUTS" title={clientText(language, 'نقاط الوصول السريع', 'Quick access')} />
-          <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
-            <QuickLink href="/client/consultant" code="SUPPORT / 01" title={clientText(language, 'تحدث مع مهندس', 'Talk to an engineer')} description={clientText(language, 'استشارة مباشرة عبر واتساب', 'Direct WhatsApp consultation')} icon={MessageCircle} />
-            <QuickLink href="/client/printing" code="PRINT / 02" title={clientText(language, 'حجز طباعة جديدة', 'Book a new print')} description={clientText(language, 'ابدأ طلباً لمشروع جديد', 'Start a request for a new project')} icon={Printer} />
-            <QuickLink href="/client/consultant" code="NETWORK / 03" title={clientText(language, 'دليل الشركاء', 'Partner directory')} description={clientText(language, 'خبراء موصى بهم من AJ', 'AJ-recommended specialists')} icon={UsersRound} />
-            <QuickLink href="/client/settings" code="ACCOUNT / 04" title={clientText(language, 'بيانات الحساب', 'Account details')} description={clientText(language, 'الملف والإشعارات واللغة', 'Profile, alerts, and language')} icon={SlidersHorizontal} />
-          </div>
-        </Panel>
-      </div>
-
-      <div className="mt-4 flex flex-col items-start justify-between gap-4 border border-primary/20 bg-primary/5 p-5 sm:flex-row sm:items-center sm:px-6">
-        <div className="flex items-center gap-3"><span className="grid size-9 place-items-center border border-primary/40 text-primary"><BriefcaseBusiness className="size-4" /></span><div><p className="text-sm font-semibold">{clientText(language, 'تحتاج إلى إضافة نطاق جديد للمشروع؟', 'Need to extend the scope?')}</p><p className="mt-1 text-xs text-muted-foreground">{clientText(language, 'فريق AJ جاهز لمراجعة الأجزاء والخدمات المرتبطة.', 'The AJ team can review related parts and services.')}</p></div></div>
-        <Link href="/client/consultant" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">{clientText(language, 'افتح تذكرة دعم', 'Open support desk')} <ChevronLeft className="size-4 rtl:rotate-180" /></Link>
-      </div>
+  const { language, profile, requests, isLoading, error, refresh } = useClientDashboard();
+  const activeCount = requests.filter((request) => request.status !== 'completed').length;
+  const latest = requests[0];
+  return <div className="mx-auto max-w-[1480px]">
+    <PageIntro code="CLIENT / 01 — OVERVIEW" title={clientText(language, `مرحباً، ${profile.name.split(' ')[0] || 'عميلنا'}`, `Welcome, ${profile.name.split(' ')[0] || 'client'}`)} description={clientText(language, 'هذه مساحة حقيقية لطلباتك الهندسية وحالة كل طلب محفوظ على حسابك.', 'A real workspace for your engineering requests and the status of every request saved to your account.')} action={<Tag tone="green">{clientText(language, 'حساب موثق', 'VERIFIED ACCOUNT')}</Tag>} />
+    {Boolean(error) && <div className="mt-6 flex items-center justify-between gap-4 border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive-foreground"><span>{clientText(language, 'تعذر تحميل بيانات الحساب. حاول مرة أخرى.', 'We could not load your account data. Try again.')}</span><button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 border border-destructive/40 px-3 py-2 font-code text-[9px]"><RefreshCw className="size-3" />RETRY</button></div>}
+    <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="TOTAL REQUESTS" value={isLoading ? '—' : String(requests.length).padStart(2, '0')} note={clientText(language, 'كل الطلبات المحفوظة', 'All saved requests')} icon={FileText} /><Metric label="ACTIVE" value={isLoading ? '—' : String(activeCount).padStart(2, '0')} note={clientText(language, 'طلبات بانتظار إجراء', 'Requests still in progress')} icon={Activity} /><Metric label="LAST STATUS" value={isLoading ? '—' : latest ? latest.status.toUpperCase() : '—'} note={latest ? requestStatus(language, latest) : clientText(language, 'لا توجد طلبات', 'No requests yet')} icon={Gauge} /><Metric label="ACCOUNT" value={profile.company ? 'READY' : 'OPEN'} note={profile.company || clientText(language, 'أضف اسم الشركة من الإعدادات', 'Add your company in settings')} icon={CircleCheck} /></div>
+    <div className="mt-4 grid gap-4 xl:grid-cols-[1.45fr_.8fr]">
+      <Panel><PanelHeader eyebrow="REQUESTS / PERSISTED" title={clientText(language, 'طلباتك الأخيرة', 'Your recent requests')} action={<Link href="/client/printing" className="font-code text-[9px] text-primary hover:underline">{clientText(language, 'طلب جديد', 'NEW REQUEST')}</Link>} />{isLoading ? <div className="p-6 text-sm text-muted-foreground">{clientText(language, 'جارٍ تحميل بياناتك…', 'Loading your data…')}</div> : requests.length === 0 ? <div className="p-6"><p className="font-display text-xl font-bold">{clientText(language, 'لا توجد طلبات محفوظة بعد', 'No saved requests yet')}</p><p className="mt-2 text-sm leading-7 text-muted-foreground">{clientText(language, 'ابدأ بطلب طباعة ثلاثية الأبعاد، وسيظهر هنا مع مرجعه وحالته.', 'Start a 3D printing request and it will appear here with its reference and status.')}</p><Link href="/client/printing" className="mt-6 inline-flex h-11 items-center gap-2 bg-primary px-5 text-sm font-bold text-primary-foreground"><Printer className="size-4" />{clientText(language, 'ابدأ طلباً', 'Start a request')}</Link></div> : <div className="divide-y divide-border/70">{requests.map((request) => <div key={request.id} className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Tag tone={request.status === 'completed' ? 'green' : request.status === 'submitted' ? 'amber' : 'blue'}>{requestStatus(language, request)}</Tag><span className="font-code text-[9px] text-muted-foreground">{request.reference}</span></div><p className="mt-3 truncate font-display text-lg font-bold">{request.projectName}</p><p className="mt-1 text-xs text-muted-foreground">{request.material} · {request.quantity} {clientText(language, 'قطعة', 'units')} · {requestDate(request.createdAt, language)}</p></div><Link href="/client/printing" className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-primary hover:underline">{clientText(language, 'عرض الطلبات', 'View requests')} <span aria-hidden>↗</span></Link></div>)}</div>}</Panel>
+      <Panel><PanelHeader eyebrow="ACCESS / ACTIONS" title={clientText(language, 'اختصارات حقيقية', 'Useful shortcuts')} /><div className="grid gap-3 p-5 sm:p-6"><QuickLink href="/client/printing" code="PRINT / 01" title={clientText(language, 'طلب طباعة جديد', 'New print request')} description={clientText(language, 'أرسل المواصفات لفريق الهندسة', 'Send specifications to engineering')} icon={Printer} /><QuickLink href="/client/settings" code="ACCOUNT / 02" title={clientText(language, 'تحديث بيانات الحساب', 'Update account details')} description={clientText(language, 'الاسم والشركة واللغة', 'Name, company, and language')} icon={FileText} /></div></Panel>
     </div>
-  );
+    <div className="mt-4 flex items-center gap-3 border border-primary/20 bg-primary/5 p-5 text-sm text-muted-foreground"><Clock3 className="size-4 shrink-0 text-primary" />{clientText(language, 'حالة الطلب تتغير فقط عندما يسجلها فريق AJ، ولا توجد مواعيد أو نسب تقدم افتراضية.', 'Request status changes only when AJ records it; there are no fabricated dates or progress percentages.')}</div>
+  </div>;
 }
 
 export default ClientOverviewPage;

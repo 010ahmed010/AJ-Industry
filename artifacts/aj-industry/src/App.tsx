@@ -1,17 +1,72 @@
-import { type FormEvent, createContext, useContext, useEffect, useState } from 'react';
+import { type FormEvent, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCreateInquiry, useCreatePrintEstimate, useGetHomeContent, useGetService, useListMaterials, useListServices } from '@workspace/api-client-react';
 import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Sparkles, X, Zap } from 'lucide-react';
-import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
+import { Link, Redirect, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
 import { ContactPage, ServiceDetailPage as StructuredServiceDetailPage } from '@/pages/PublicSidePages';
 import { ClientDashboardPage } from '@/pages/ClientSidePages';
 
 const queryClient = new QueryClient();
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: '#3d9bff',
+    colorForeground: '#edf4ff',
+    colorMutedForeground: '#9aabc4',
+    colorDanger: '#ff746c',
+    colorBackground: '#0b1528',
+    colorInput: '#101f37',
+    colorInputForeground: '#edf4ff',
+    colorNeutral: '#2a4164',
+    fontFamily: 'Space Grotesk, Cairo, sans-serif',
+    borderRadius: '0.65rem',
+  },
+  elements: {
+    rootBox: 'w-full flex justify-center',
+    cardBox: 'bg-[#0b1528] rounded-2xl w-[440px] max-w-full overflow-hidden border border-[#2a4164]',
+    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    headerTitle: 'text-[#edf4ff] font-display',
+    headerSubtitle: 'text-[#9aabc4]',
+    socialButtonsBlockButtonText: 'text-[#edf4ff]',
+    formFieldLabel: 'text-[#edf4ff]',
+    footerActionLink: 'text-[#3d9bff]',
+    footerActionText: 'text-[#9aabc4]',
+    dividerText: 'text-[#9aabc4]',
+    identityPreviewEditButton: 'text-[#3d9bff]',
+    formFieldSuccessText: 'text-[#3ed7c0]',
+    alertText: 'text-[#ff746c]',
+    logoBox: 'h-10',
+    logoImage: 'h-10 w-auto',
+    socialButtonsBlockButton: 'border-[#2a4164] bg-[#101f37] hover:bg-[#172b4a]',
+    formButtonPrimary: 'bg-[#3d9bff] text-[#071126] hover:bg-[#62adff]',
+    formFieldInput: 'border-[#2a4164] bg-[#101f37] text-[#edf4ff]',
+    footerAction: 'bg-transparent',
+    dividerLine: 'bg-[#2a4164]',
+    alert: 'border-[#7b363d] bg-[#321a25]',
+    otpCodeFieldInput: 'border-[#2a4164] bg-[#101f37] text-[#edf4ff]',
+    formFieldRow: 'gap-2',
+    main: 'bg-transparent',
+  },
+};
 
 type Language = 'ar' | 'en';
 const LanguageContext = createContext<{ language: Language; toggle: () => void }>({ language: 'ar', toggle: () => undefined });
@@ -67,6 +122,8 @@ function QueryNotice({ retry, label }: { retry: () => void; label: string }) {
 
 function Header() {
   const { language, toggle } = useLanguage();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const navigation = [
@@ -96,6 +153,25 @@ function Header() {
           <span className="font-code text-[10px] text-primary">{language === 'ar' ? 'AR' : 'EN'}</span>
           <span className="hidden text-muted-foreground sm:inline">{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
+        {isLoaded && isSignedIn ? (
+          <>
+            <Link href="/client" onClick={close} className="hidden h-9 items-center border border-primary/40 px-4 text-xs font-bold text-primary transition-colors hover:bg-primary/10 sm:flex" data-testid="link-header-dashboard">
+              {display(language, 'لوحة العميل', 'Client dashboard')}
+            </Link>
+            <button type="button" onClick={() => signOut({ redirectUrl: basePath || '/' })} className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex" data-testid="button-header-sign-out">
+              {display(language, 'تسجيل الخروج', 'Sign out')}
+            </button>
+          </>
+        ) : isLoaded ? (
+          <>
+            <Link href="/sign-in" onClick={close} className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex" data-testid="link-header-sign-in">
+              {display(language, 'تسجيل الدخول', 'Sign in')}
+            </Link>
+            <Link href="/sign-up" onClick={close} className="hidden h-9 items-center bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 sm:flex" data-testid="link-header-sign-up">
+              {display(language, 'إنشاء حساب', 'Create account')}
+            </Link>
+          </>
+        ) : null}
         <Link href="/#contact" className="hidden h-9 items-center gap-2 bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 sm:flex" data-testid="link-header-contact">
           {display(language, 'ابدأ مشروعك', 'Start a project')} <ArrowUpRight className="size-3.5" />
         </Link>
@@ -392,14 +468,63 @@ function MaterialsPage() {
   </main></Shell>;
 }
 
-function Router() {
+function AuthPage({ kind }: { kind: 'sign-in' | 'sign-up' }) {
+  const Component = kind === 'sign-in' ? SignIn : SignUp;
+  const { language } = useLanguage();
+  return (
+    <div className="min-h-[100dvh] bg-background px-4 py-10">
+      <div className="mx-auto mb-6 flex max-w-[440px] items-center justify-between">
+        <Link href="/" className="inline-flex items-center gap-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-primary" data-testid={`link-auth-home-${kind}`}>
+          <span className="grid size-9 place-items-center border border-primary/50 bg-primary/10 font-code text-xs font-bold text-primary">AJ</span>
+          <span>{display(language, 'العودة إلى الصفحة الرئيسية', 'Back to home')}</span>
+        </Link>
+        <span className="font-code text-[9px] tracking-[.18em] text-primary">AJ—INDUSTRY</span>
+      </div>
+      <Component
+        routing="path"
+        path={`${basePath}/${kind}`}
+        {...(kind === 'sign-in' ? { signUpUrl: `${basePath}/sign-up` } : { signInUrl: `${basePath}/sign-in` })}
+      />
+    </div>
+  );
+}
+
+function ClientPortalRoute() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <div className="grid min-h-[100dvh] place-items-center bg-background font-code text-xs text-muted-foreground">LOADING / AUTHENTICATION</div>;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  return <ClientDashboardPage />;
+}
+
+function HomeRedirect() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <Home />;
+  return isSignedIn ? <Redirect to="/client" /> : <Home />;
+}
+
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const previousUserId = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const nextUserId = user?.id ?? null;
+      if (previousUserId.current !== undefined && previousUserId.current !== nextUserId) queryClient.clear();
+      previousUserId.current = nextUserId;
+    });
+    return unsubscribe;
+  }, [addListener]);
+  return null;
+}
+
+function AuthenticatedRouter() {
   const [location] = useLocation();
   const { language } = useLanguage();
-  return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={Home} /><Route path="/services/:slug">{() => <Shell><StructuredServiceDetailPage language={language} /></Shell>}</Route><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route><Route path="/client" component={ClientDashboardPage} /><Route path="/client/printing" component={ClientDashboardPage} /><Route path="/client/consultant" component={ClientDashboardPage} /><Route path="/client/settings" component={ClientDashboardPage} /><Route component={NotFound} /></Switch></ErrorBoundary>;
+  return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={HomeRedirect} /><Route path="/sign-in/*?" component={() => <AuthPage kind="sign-in" />} /><Route path="/sign-up/*?" component={() => <AuthPage kind="sign-up" />} /><Route path="/services/:slug">{() => <Shell><StructuredServiceDetailPage language={language} /></Shell>}</Route><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route><Route path="/client" component={ClientPortalRoute} /><Route path="/client/printing" component={ClientPortalRoute} /><Route path="/client/settings" component={ClientPortalRoute} /><Route component={NotFound} /></Switch></ErrorBoundary>;
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter></LanguageProvider><Toaster /></TooltipProvider></QueryClientProvider>;
+  if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY');
+  return <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your client workspace' } }, signUp: { start: { title: 'Create your client account', subtitle: 'Keep your AJ project requests in one place' } } }}><ClerkQueryClientCacheInvalidator /><AuthenticatedRouter /></ClerkProvider></WouterRouter></LanguageProvider><Toaster /></TooltipProvider></QueryClientProvider>;
 }
 
 export default App;
