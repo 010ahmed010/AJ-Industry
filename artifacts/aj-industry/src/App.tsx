@@ -18,6 +18,9 @@ const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+function stripBase(path: string) {
+  return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
+}
 
 const clerkAppearance = {
   theme: shadcn,
@@ -522,9 +525,26 @@ function AuthenticatedRouter() {
   return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={HomeRedirect} /><Route path="/sign-in/*?" component={() => <AuthPage kind="sign-in" />} /><Route path="/sign-up/*?" component={() => <AuthPage kind="sign-up" />} /><Route path="/services/:slug">{() => <Shell><StructuredServiceDetailPage language={language} /></Shell>}</Route><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route><Route path="/client" component={ClientPortalRoute} /><Route path="/client/printing" component={ClientPortalRoute} /><Route path="/client/settings" component={ClientPortalRoute} /><Route component={NotFound} /></Switch></ErrorBoundary>;
 }
 
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+  return <ClerkProvider
+    publishableKey={clerkPubKey}
+    proxyUrl={clerkProxyUrl}
+    appearance={clerkAppearance}
+    signInUrl={`${basePath}/sign-in`}
+    signUpUrl={`${basePath}/sign-up`}
+    localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your client workspace' } }, signUp: { start: { title: 'Create your client account', subtitle: 'Keep your AJ project requests in one place' } } }}
+    routerPush={(to) => setLocation(stripBase(to))}
+    routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+  >
+    <ClerkQueryClientCacheInvalidator />
+    <AuthenticatedRouter />
+  </ClerkProvider>;
+}
+
 function App() {
   if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY');
-  return <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your client workspace' } }, signUp: { start: { title: 'Create your client account', subtitle: 'Keep your AJ project requests in one place' } } }}><ClerkQueryClientCacheInvalidator /><AuthenticatedRouter /></ClerkProvider></WouterRouter></LanguageProvider><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><ClerkProviderWithRoutes /></WouterRouter></LanguageProvider><Toaster /></TooltipProvider></QueryClientProvider>;
 }
 
 export default App;
