@@ -72,9 +72,21 @@ async function loadOrCreateProfile(userId: string): Promise<ClientProfileRecord>
     updatedAt: new Date(),
   };
 
+  // Keep createdAt insert-only. Including it in both $set and $setOnInsert
+  // makes MongoDB reject the first upsert with a conflicting update path.
   await profiles.updateOne(
     { userId },
-    { $set: profile, $setOnInsert: { createdAt: profile.createdAt } },
+    {
+      $set: {
+        userId: profile.userId,
+        username: profile.username,
+        email: profile.email,
+        name: profile.name,
+        company: profile.company,
+        updatedAt: profile.updatedAt,
+      },
+      $setOnInsert: { createdAt: profile.createdAt },
+    },
     { upsert: true },
   );
   return profile;

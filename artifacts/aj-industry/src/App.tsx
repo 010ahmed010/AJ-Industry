@@ -6,7 +6,7 @@ import { shadcn } from '@clerk/themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useCreateInquiry, useCreatePrintEstimate, useGetHomeContent, useGetService, useListMaterials, useListServices } from '@workspace/api-client-react';
+import { getGetClientProfileQueryKey, useCreateInquiry, useCreatePrintEstimate, useGetClientProfile, useGetHomeContent, useGetService, useListMaterials, useListServices } from '@workspace/api-client-react';
 import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Sparkles, X, Zap } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
@@ -519,6 +519,18 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function ClientAccountProvisioner() {
+  const { isLoaded, isSignedIn } = useAuth();
+  useGetClientProfile({
+    query: {
+      enabled: isLoaded && Boolean(isSignedIn),
+      staleTime: 60_000,
+      queryKey: getGetClientProfileQueryKey(),
+    },
+  });
+  return null;
+}
+
 function AuthenticatedRouter() {
   const [location] = useLocation();
   const { language } = useLanguage();
@@ -538,6 +550,7 @@ function ClerkProviderWithRoutes() {
     routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
   >
     <ClerkQueryClientCacheInvalidator />
+    <ClientAccountProvisioner />
     <AuthenticatedRouter />
   </ClerkProvider>;
 }
