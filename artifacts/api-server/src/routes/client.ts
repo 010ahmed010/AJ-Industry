@@ -2,8 +2,11 @@ import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { clerkClient, getAuth } from "@clerk/express";
 import {
+  CreateClientConsultationBody,
+  CreateClientConsultationResponse,
   CreateClientPrintRequestBody,
   CreateClientPrintRequestResponse,
+  GetClientConsultationsResponse,
   GetClientOverviewResponse,
   GetClientProfileResponse,
   UpdateClientProfileBody,
@@ -39,6 +42,22 @@ type ClientRequestRecord = {
   timeline: string;
   notes: string;
   fileName?: string;
+  createdAt: Date;
+};
+
+type ClientConsultationRecord = {
+  _id: string;
+  userId: string;
+  reference: string;
+  kind: "consultation" | "specialist";
+  status: "submitted" | "reviewing" | "contacted" | "completed";
+  statusAr: string;
+  statusEn: string;
+  title: string;
+  details: string;
+  specialty?: string;
+  providerType?: "person" | "company" | "guide";
+  preferredProvider?: string;
   createdAt: Date;
 };
 
@@ -119,6 +138,23 @@ function publicRequest(request: ClientRequestRecord) {
     notes: request.notes,
     ...(request.fileName ? { fileName: request.fileName } : {}),
     createdAt: request.createdAt,
+  };
+}
+
+function publicConsultation(consultation: ClientConsultationRecord) {
+  return {
+    id: consultation._id,
+    reference: consultation.reference,
+    kind: consultation.kind,
+    status: consultation.status,
+    statusAr: consultation.statusAr,
+    statusEn: consultation.statusEn,
+    title: consultation.title,
+    details: consultation.details,
+    ...(consultation.specialty ? { specialty: consultation.specialty } : {}),
+    ...(consultation.providerType ? { providerType: consultation.providerType } : {}),
+    ...(consultation.preferredProvider ? { preferredProvider: consultation.preferredProvider } : {}),
+    createdAt: consultation.createdAt,
   };
 }
 
@@ -226,6 +262,63 @@ router.post("/client/print-requests", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ err: error, userId, reference: request.reference }, "Unable to persist client print request");
     res.status(503).json({ error: "Print request service is temporarily unavailable" });
+  }
+});
+
+router.get("/client/consultations", async (req, res): Promise<void> => {
+  const userId = authenticatedUserId(req, res);
+  if (!userId) return;
+
+  try {
+    const db = await getMongoDb();
+    const consultations = await db
+      .collection<ClientConsultationRecord>("clientConsultations")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(25)
+      .toArray();
+    res.json(GetClientConsultationsResponse.parse(consultations.map(publicConsultation)));
+  } catch (error) {
+    req.log.error({ err: error, userId }, "Unable to load client consultations");
+    res.status(503).json({ error: "Consultation service is temporarily unavailable" });
+  }
+});
+
+router.post("/client/consultations", async (req, res): Promise<void> => {
+  const userId = authenticatedUserId(req, res);
+  if (!userId) return;
+  const parsed = CreateClientConsultationBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const title = parsed.data.title.trim();
+  const details = parsed.data.details.trim();
+  const consultation: ClientConsultationRecord = {
+    _id: randomUUID(),
+    userId,
+    reference: `AJ-CONSULT-${randomUUID().slice(0, 8).toUpperCase()}`,
+    kind: parsed.data.kind,
+    status: "submitted",
+    statusAr: "تم الاستلام",
+    statusEn: "Received",
+    title,
+    details,
+    ...(parsed.data.specialty?.trim() ? { specialty: parsed.data.specialty.trim() } : {}),
+    ...(parsed.data.providerType ? { providerType: parsed.data.providerType } : {}),
+    ...(parsed.data.preferredProvider?.trim() ? { preferredProvider: parsed.data.preferredProvider.trim() } : {}),
+    createdAt: new Date(),
+  };
+
+  try {
+    const db = await getMongoDb();
+    await db.collection<ClientConsultationRecord>("clientConsultations").insertOne(consultation);
+    req.log.info({ userId, reference: consultation.reference, kind: consultation.kind }, "Client consultation persisted");
+    res.status(201).json(CreateClientConsultationResponse.parse(publicConsultation(consultation)));
+  } catch (error) {
+    req.log.error({ err: error, userId, reference: consultation.reference }, "Unable to persist client consultation");
+    res.status(503).json({ error: "Consultation service is temporarily unavailable" });
   }
 });
 

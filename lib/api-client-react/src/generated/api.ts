@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ClientConsultation,
+  ClientConsultationInput,
   ClientOverview,
   ClientProfile,
   ClientRequest,
@@ -886,5 +888,153 @@ export const useCreateClientPrintRequest = <TError = ErrorType<Error>,
         TContext
       > => {
       return useMutation(getCreateClientPrintRequestMutationOptions(options));
+    }
+
+export const getGetClientConsultationsUrl = () => {
+
+
+
+
+  return `/api/client/consultations`
+}
+
+/**
+ * @summary Get the authenticated client's consultation requests
+ */
+export const getClientConsultations = async ( options?: Parameters<typeof customFetch>[1]): Promise<ClientConsultation[]> => {
+
+  return customFetch<ClientConsultation[]>(getGetClientConsultationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClientConsultationsQueryKey = () => {
+    return [
+    `/api/client/consultations`
+    ] as const;
+    }
+
+
+export const getGetClientConsultationsQueryOptions = <TData = Awaited<ReturnType<typeof getClientConsultations>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientConsultations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClientConsultationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientConsultations>>> = ({ signal }) => getClientConsultations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientConsultations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClientConsultationsQueryResult = NonNullable<Awaited<ReturnType<typeof getClientConsultations>>>
+export type GetClientConsultationsQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Get the authenticated client's consultation requests
+ */
+
+export function useGetClientConsultations<TData = Awaited<ReturnType<typeof getClientConsultations>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientConsultations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClientConsultationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateClientConsultationUrl = () => {
+
+
+
+
+  return `/api/client/consultations`
+}
+
+/**
+ * @summary Create an authenticated consultation or specialist request
+ */
+export const createClientConsultation = async (clientConsultationInput: ClientConsultationInput, options?: Parameters<typeof customFetch>[1]): Promise<ClientConsultation> => {
+
+  return customFetch<ClientConsultation>(getCreateClientConsultationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(clientConsultationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateClientConsultationMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClientConsultation>>, TError,{data: BodyType<ClientConsultationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClientConsultation>>, TError,{data: BodyType<ClientConsultationInput>}, TContext> => {
+
+const mutationKey = ['createClientConsultation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClientConsultation>>, {data: BodyType<ClientConsultationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createClientConsultation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClientConsultationMutationResult = NonNullable<Awaited<ReturnType<typeof createClientConsultation>>>
+    export type CreateClientConsultationMutationBody = BodyType<ClientConsultationInput>
+    export type CreateClientConsultationMutationError = ErrorType<Error>
+
+    /**
+ * @summary Create an authenticated consultation or specialist request
+ */
+export const useCreateClientConsultation = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClientConsultation>>, TError,{data: BodyType<ClientConsultationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClientConsultation>>,
+        TError,
+        {data: BodyType<ClientConsultationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClientConsultationMutationOptions(options));
     }
 

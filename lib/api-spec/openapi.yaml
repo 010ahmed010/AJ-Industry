@@ -259,6 +259,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /client/consultations:
+    get:
+      operationId: getClientConsultations
+      tags: [client]
+      summary: Get the authenticated client's consultation requests
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Consultation requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientConsultation"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Consultation service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createClientConsultation
+      tags: [client]
+      summary: Create an authenticated consultation or specialist request
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientConsultationInput"
+      responses:
+        "201":
+          description: Persisted consultation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientConsultation"
+        "400":
+          description: Invalid consultation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Consultation service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   securitySchemes:
     clerkSession:
@@ -381,6 +446,62 @@ components:
           type: string
           maxLength: 255
       required: [projectName, material, quantity, finish, timeline, notes]
+    ClientConsultation:
+      type: object
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+        kind:
+          type: string
+          enum: [consultation, specialist]
+        status:
+          type: string
+          enum: [submitted, reviewing, contacted, completed]
+        statusAr:
+          type: string
+        statusEn:
+          type: string
+        title:
+          type: string
+        details:
+          type: string
+        specialty:
+          type: string
+        providerType:
+          type: string
+          enum: [person, company, guide]
+        preferredProvider:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, reference, kind, status, statusAr, statusEn, title, details, createdAt]
+    ClientConsultationInput:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [consultation, specialist]
+        title:
+          type: string
+          minLength: 2
+          maxLength: 160
+        details:
+          type: string
+          minLength: 10
+          maxLength: 4000
+        specialty:
+          type: string
+          maxLength: 120
+        providerType:
+          type: string
+          enum: [person, company, guide]
+        preferredProvider:
+          type: string
+          maxLength: 160
+      required: [kind, title, details]
     ServiceSummary:
       type: object
       properties:

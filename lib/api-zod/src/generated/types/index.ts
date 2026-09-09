@@ -6,6 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './clientConsultation';
+export * from './clientConsultationInput';
+export * from './clientConsultationInputKind';
+export * from './clientConsultationInputProviderType';
+export * from './clientConsultationKind';
+export * from './clientConsultationProviderType';
+export * from './clientConsultationStatus';
 export * from './clientOverview';
 export * from './clientProfile';
 export * from './clientRequest';

@@ -104,6 +104,84 @@ export interface CreateClientPrintRequestInput {
   fileName?: string;
 }
 
+export type ClientConsultationKind = typeof ClientConsultationKind[keyof typeof ClientConsultationKind];
+
+
+export const ClientConsultationKind = {
+  consultation: 'consultation',
+  specialist: 'specialist',
+} as const;
+
+export type ClientConsultationStatus = typeof ClientConsultationStatus[keyof typeof ClientConsultationStatus];
+
+
+export const ClientConsultationStatus = {
+  submitted: 'submitted',
+  reviewing: 'reviewing',
+  contacted: 'contacted',
+  completed: 'completed',
+} as const;
+
+export type ClientConsultationProviderType = typeof ClientConsultationProviderType[keyof typeof ClientConsultationProviderType];
+
+
+export const ClientConsultationProviderType = {
+  person: 'person',
+  company: 'company',
+  guide: 'guide',
+} as const;
+
+export interface ClientConsultation {
+  id: string;
+  reference: string;
+  kind: ClientConsultationKind;
+  status: ClientConsultationStatus;
+  statusAr: string;
+  statusEn: string;
+  title: string;
+  details: string;
+  specialty?: string;
+  providerType?: ClientConsultationProviderType;
+  preferredProvider?: string;
+  createdAt: string;
+}
+
+export type ClientConsultationInputKind = typeof ClientConsultationInputKind[keyof typeof ClientConsultationInputKind];
+
+
+export const ClientConsultationInputKind = {
+  consultation: 'consultation',
+  specialist: 'specialist',
+} as const;
+
+export type ClientConsultationInputProviderType = typeof ClientConsultationInputProviderType[keyof typeof ClientConsultationInputProviderType];
+
+
+export const ClientConsultationInputProviderType = {
+  person: 'person',
+  company: 'company',
+  guide: 'guide',
+} as const;
+
+export interface ClientConsultationInput {
+  kind: ClientConsultationInputKind;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  title: string;
+  /**
+     * @minLength 10
+     * @maxLength 4000
+     */
+  details: string;
+  /** @maxLength 120 */
+  specialty?: string;
+  providerType?: ClientConsultationInputProviderType;
+  /** @maxLength 160 */
+  preferredProvider?: string;
+}
+
 export interface ServiceSummary {
   slug: string;
   titleAr: string;

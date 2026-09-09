@@ -278,3 +278,63 @@ export const CreateClientPrintRequestResponse = zod.object({
 })
 
 
+/**
+ * @summary Get the authenticated client's consultation requests
+ */
+export const GetClientConsultationsResponseItem = zod.object({
+  "id": zod.string(),
+  "reference": zod.string(),
+  "kind": zod.enum(['consultation', 'specialist']),
+  "status": zod.enum(['submitted', 'reviewing', 'contacted', 'completed']),
+  "statusAr": zod.string(),
+  "statusEn": zod.string(),
+  "title": zod.string(),
+  "details": zod.string(),
+  "specialty": zod.string().optional(),
+  "providerType": zod.enum(['person', 'company', 'guide']).optional(),
+  "preferredProvider": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})
+export const GetClientConsultationsResponse = zod.array(GetClientConsultationsResponseItem)
+
+
+/**
+ * @summary Create an authenticated consultation or specialist request
+ */
+export const createClientConsultationBodyTitleMin = 2;
+export const createClientConsultationBodyTitleMax = 160;
+
+export const createClientConsultationBodyDetailsMin = 10;
+export const createClientConsultationBodyDetailsMax = 4000;
+
+export const createClientConsultationBodySpecialtyMax = 120;
+
+export const createClientConsultationBodyPreferredProviderMax = 160;
+
+
+
+export const CreateClientConsultationBody = zod.object({
+  "kind": zod.enum(['consultation', 'specialist']),
+  "title": zod.string().min(createClientConsultationBodyTitleMin).max(createClientConsultationBodyTitleMax),
+  "details": zod.string().min(createClientConsultationBodyDetailsMin).max(createClientConsultationBodyDetailsMax),
+  "specialty": zod.string().max(createClientConsultationBodySpecialtyMax).optional(),
+  "providerType": zod.enum(['person', 'company', 'guide']).optional(),
+  "preferredProvider": zod.string().max(createClientConsultationBodyPreferredProviderMax).optional()
+})
+
+export const CreateClientConsultationResponse = zod.object({
+  "id": zod.string(),
+  "reference": zod.string(),
+  "kind": zod.enum(['consultation', 'specialist']),
+  "status": zod.enum(['submitted', 'reviewing', 'contacted', 'completed']),
+  "statusAr": zod.string(),
+  "statusEn": zod.string(),
+  "title": zod.string(),
+  "details": zod.string(),
+  "specialty": zod.string().optional(),
+  "providerType": zod.enum(['person', 'company', 'guide']).optional(),
+  "preferredProvider": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
