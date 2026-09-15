@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useClerk } from '@clerk/react';
+import { useClerk } from '@/lib/auth';
 import { useGetClientOverview, useGetClientProfile, useUpdateClientProfile, getGetClientOverviewQueryKey, getGetClientProfileQueryKey } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
-import { Activity, AlertTriangle, ChevronLeft, Command, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, MessageCircle, PanelLeftClose, Printer, Settings2, X } from 'lucide-react';
+import { Activity, AlertTriangle, ChevronLeft, Command, DollarSign, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, MessageCircle, PanelLeftClose, Printer, Settings2, ShieldCheck, UserCheck, X } from 'lucide-react';
 
 export type ClientLanguage = 'ar' | 'en';
 export const isArabic = (language: ClientLanguage) => language === 'ar';
@@ -34,6 +34,11 @@ export type ClientRequest = {
   timeline: string;
   notes: string;
   fileName?: string;
+  quoteAmount?: number;
+  quoteCurrency?: string;
+  estimatedDelivery?: string;
+  adminFeedback?: string;
+  adminUpdatedAt?: string;
   createdAt: string | Date;
 };
 
@@ -128,7 +133,7 @@ export function DashboardSidebar({ currentPath, collapsed, onCollapse, mobileOpe
   const { signOut } = useClerk();
   const sidebarContent = <div className="flex h-full min-h-0 flex-col">
     <div className={`flex h-[78px] items-center border-b border-border/70 px-4 ${collapsed ? 'justify-center' : 'justify-between'}`}><Link href="/" onClick={onMobileClose} aria-label={clientText(language, 'العودة إلى الصفحة الرئيسية', 'Back to public home')}><BrandMark compact={collapsed} /></Link>{!collapsed && <button type="button" onClick={onCollapse} className="grid size-8 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary" aria-label={clientText(language, 'طي الشريط الجانبي', 'Collapse sidebar')}><PanelLeftClose className="size-4" /></button>}</div>
-    <div className={`border-b border-border/70 px-4 py-5 ${collapsed ? 'text-center' : ''}`}><div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}><span className="grid size-9 shrink-0 place-items-center border border-primary/40 bg-primary/10 font-display text-sm font-bold text-primary">{profile.name.slice(0, 1) || 'A'}</span>{!collapsed && <div className="min-w-0"><p className="truncate text-sm font-semibold">{profile.name || profile.username}</p><p className="mt-1 truncate font-code text-[9px] text-muted-foreground">{profile.email}</p></div>}</div></div>
+    <div className={`border-b border-border/70 px-4 py-5 ${collapsed ? 'text-center' : ''}`}><div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}><span className="grid size-9 shrink-0 place-items-center border border-primary/40 bg-primary/10 font-display text-sm font-bold text-primary">{(profile?.name || profile?.username || 'A').slice(0, 1) || 'A'}</span>{!collapsed && <div className="min-w-0"><p className="truncate text-sm font-semibold">{profile?.name || profile?.username || 'Client'}</p><p className="mt-1 truncate font-code text-[9px] text-muted-foreground">{profile?.email || '—'}</p></div>}</div></div>
     <nav className="min-h-0 flex-1 px-3 py-5" aria-label={clientText(language, 'تنقل لوحة العميل', 'Client dashboard navigation')}><p className={`mb-3 px-3 font-code text-[9px] tracking-[.18em] text-muted-foreground ${collapsed ? 'text-center' : ''}`}>{collapsed ? '—' : clientText(language, 'مساحة العمل', 'WORKSPACE')}</p><div className="grid gap-1">{navItems.map((item) => { const active = currentPath === item.href; const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={onMobileClose} className={`group flex min-h-11 items-center gap-3 border px-3 py-2 transition-colors ${active ? 'border-primary/45 bg-primary/10 text-foreground' : 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary/60 hover:text-foreground'} ${collapsed ? 'justify-center' : ''}`} aria-current={active ? 'page' : undefined} title={collapsed ? clientText(language, item.labelAr, item.labelEn) : undefined}><Icon className={`size-4 shrink-0 ${active ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />{!collapsed && <span className="flex min-w-0 flex-1 items-center justify-between gap-2"><span className="truncate text-sm">{clientText(language, item.labelAr, item.labelEn)}</span><span className="font-code text-[9px] text-muted-foreground">{item.code}</span></span>}</Link>; })}</div></nav>
      <div className={`border-t border-border/70 p-4 ${collapsed ? 'grid justify-center gap-3' : 'grid gap-3'}`}><div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>{!collapsed && <StatusLight label={clientText(language, 'متصل', 'ONLINE')} />}<button type="button" onClick={onMobileClose} className="text-muted-foreground transition-colors hover:text-primary" aria-label={clientText(language, 'مركز المساعدة', 'Help center')}><LifeBuoy className="size-4" /></button></div><button type="button" onClick={() => void signOut({ redirectUrl: '/' })} className={`flex min-h-10 items-center gap-3 border border-border px-3 py-2 text-start text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/60 hover:text-destructive-foreground ${collapsed ? 'justify-center' : ''}`} aria-label={clientText(language, 'تسجيل الخروج', 'Sign out')} data-testid="button-sidebar-sign-out"><LogOut className="size-4 shrink-0" />{!collapsed && <span>{clientText(language, 'تسجيل الخروج', 'Sign out')}</span>}</button></div>
   </div>;

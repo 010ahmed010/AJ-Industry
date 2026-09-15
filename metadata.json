@@ -1,0 +1,6 @@
+{
+  "name": "AJ-Industry",
+  "description": "Industrial engineering solutions, 3D CAD simulation, machine design, reverse engineering, and technical 3D printing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

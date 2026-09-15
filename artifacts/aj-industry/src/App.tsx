@@ -1,22 +1,37 @@
 import { type FormEvent, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from '@clerk/react';
+import { ClerkProvider } from '@clerk/react';
+import { SignIn, SignUp, useAuth, useClerk, MockAuthProvider, isClerkConfigured } from '@/lib/auth';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { getGetClientProfileQueryKey, useCreateInquiry, useCreatePrintEstimate, useGetClientProfile, useGetHomeContent, useGetService, useListMaterials, useListServices } from '@workspace/api-client-react';
-import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Sparkles, X, Zap } from 'lucide-react';
+import { getGetClientProfileQueryKey, useCreateInquiry, useCreatePrintEstimate, useGetClientProfile, useGetHomeContent, useGetService, useListMaterials, useListServices, setAuthTokenGetter } from '@workspace/api-client-react';
+import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, LayoutDashboard, Lock, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Shield, Sparkles, X, Zap } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
 import { ContactPage, ServiceDetailPage as StructuredServiceDetailPage } from '@/pages/PublicSidePages';
 import { ClientDashboardPage } from '@/pages/ClientSidePages';
+import { AdminDashboardPage, AdminLoginPage } from '@/pages/AdminSidePages';
 
 const queryClient = new QueryClient();
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+function resolveClerkKey(): string {
+  const envKey = (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '').trim();
+  if (envKey) return envKey;
+  try {
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      const derived = publishableKeyFromHost(window.location.hostname);
+      if (derived && derived.startsWith('pk_')) return derived;
+    }
+  } catch {
+    // Ignore fallback failure
+  }
+  return '';
+}
+const clerkPubKey = resolveClerkKey();
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 function stripBase(path: string) {
   return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
@@ -125,7 +140,7 @@ function QueryNotice({ retry, label }: { retry: () => void; label: string }) {
 
 function Header() {
   const { language, toggle } = useLanguage();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, user } = useAuth();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -158,19 +173,51 @@ function Header() {
         </button>
         {isLoaded && isSignedIn ? (
           <>
-            <Link href="/client" onClick={close} className="hidden h-9 items-center border border-primary/40 px-4 text-xs font-bold text-primary transition-colors hover:bg-primary/10 sm:flex" data-testid="link-header-dashboard">
+            <Link
+              href="/client"
+              onClick={close}
+              className="flex h-9 items-center gap-1.5 border border-primary/50 bg-primary/10 px-3.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+              data-testid="link-header-dashboard"
+            >
+              <LayoutDashboard className="size-3.5" />
               {display(language, 'لوحة العميل', 'Client dashboard')}
             </Link>
-            <button type="button" onClick={() => signOut({ redirectUrl: basePath || '/' })} className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex" data-testid="button-header-sign-out">
+            {user?.role === 'admin' && (
+              <Link
+                href="/admin-aj-industry"
+                onClick={close}
+                className="hidden h-9 items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-3 text-xs font-bold text-amber-400 transition-colors hover:bg-amber-500/20 sm:flex"
+                data-testid="link-header-admin-dashboard"
+              >
+                <Shield className="size-3.5" />
+                {display(language, 'لوحة الإدارة', 'Admin Panel')}
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => signOut({ redirectUrl: basePath || '/' })}
+              className="flex h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              data-testid="button-header-sign-out"
+            >
               {display(language, 'تسجيل الخروج', 'Sign out')}
             </button>
           </>
         ) : isLoaded ? (
           <>
-            <Link href="/sign-in" onClick={close} className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex" data-testid="link-header-sign-in">
+            <Link
+              href="/sign-in"
+              onClick={close}
+              className="flex h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              data-testid="link-header-sign-in"
+            >
               {display(language, 'تسجيل الدخول', 'Sign in')}
             </Link>
-            <Link href="/sign-up" onClick={close} className="hidden h-9 items-center bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 sm:flex" data-testid="link-header-sign-up">
+            <Link
+              href="/sign-up"
+              onClick={close}
+              className="hidden h-9 items-center bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 sm:flex"
+              data-testid="link-header-sign-up"
+            >
               {display(language, 'إنشاء حساب', 'Create account')}
             </Link>
           </>
@@ -184,7 +231,64 @@ function Header() {
       </div>
     </div>
     {open && <nav className="border-t border-border bg-background px-5 py-3 md:hidden" aria-label="Mobile navigation">
+      {isLoaded && isSignedIn && (
+        <div className="mb-3 space-y-2 border-b border-border/60 pb-3">
+          <Link
+            href="/client"
+            onClick={close}
+            className="flex items-center justify-between rounded-md bg-primary/10 px-3 py-2 text-sm font-bold text-primary"
+            data-testid="link-mobile-dashboard"
+          >
+            <span>{display(language, 'لوحة العميل', 'Client dashboard')}</span>
+            <LayoutDashboard className="size-4" />
+          </Link>
+          {user?.role === 'admin' && (
+            <Link
+              href="/admin-aj-industry"
+              onClick={close}
+              className="flex items-center justify-between rounded-md bg-amber-500/10 px-3 py-2 text-sm font-bold text-amber-400"
+              data-testid="link-mobile-admin"
+            >
+              <span>{display(language, 'لوحة الإدارة', 'Admin Panel')}</span>
+              <Shield className="size-4" />
+            </Link>
+          )}
+        </div>
+      )}
       {navigation.map((item) => <Link key={item.href} href={item.href} onClick={close} className="block border-b border-border/60 py-3 text-sm text-muted-foreground last:border-0" data-testid={`link-mobile-${item.en.toLowerCase().replaceAll(' ', '-')}`}>{display(language, item.ar, item.en)}</Link>)}
+      {isLoaded && !isSignedIn && (
+        <div className="mt-3 flex gap-2">
+          <Link
+            href="/sign-in"
+            onClick={close}
+            className="flex-1 border border-border py-2.5 text-center text-xs font-semibold text-muted-foreground"
+            data-testid="link-mobile-sign-in"
+          >
+            {display(language, 'تسجيل الدخول', 'Sign in')}
+          </Link>
+          <Link
+            href="/sign-up"
+            onClick={close}
+            className="flex-1 bg-primary py-2.5 text-center text-xs font-bold text-primary-foreground"
+            data-testid="link-mobile-sign-up"
+          >
+            {display(language, 'إنشاء حساب', 'Create account')}
+          </Link>
+        </div>
+      )}
+      {isLoaded && isSignedIn && (
+        <button
+          type="button"
+          onClick={() => {
+            close();
+            signOut({ redirectUrl: basePath || '/' });
+          }}
+          className="mt-2 w-full border border-border py-2 text-center text-xs font-semibold text-muted-foreground"
+          data-testid="button-mobile-sign-out"
+        >
+          {display(language, 'تسجيل الخروج', 'Sign out')}
+        </button>
+      )}
       <Link href="/#contact" onClick={close} className="mt-3 flex items-center justify-center gap-2 bg-primary py-3 text-sm font-bold text-primary-foreground" data-testid="link-mobile-contact">{display(language, 'اطلب استشارة', 'Request a consultation')} <ArrowUpRight className="size-4" /></Link>
     </nav>}
   </header>;
@@ -499,10 +603,33 @@ function ClientPortalRoute() {
   return <ClientDashboardPage />;
 }
 
+function AdminPortalRoute() {
+  const { isLoaded, isSignedIn, user } = useAuth();
+  if (!isLoaded) return <div className="grid min-h-[100dvh] place-items-center bg-[#071126] font-code text-xs text-muted-foreground">AJ ADMIN / VERIFYING SESSION...</div>;
+  if (!isSignedIn || user?.role !== 'admin') return <Redirect to="/admin-login" />;
+  return <AdminDashboardPage />;
+}
+
 function HomeRedirect() {
-  const { isLoaded, isSignedIn } = useAuth();
-  if (!isLoaded) return <Home />;
-  return isSignedIn ? <Redirect to="/client" /> : <Home />;
+  return <Home />;
+}
+
+function ClerkAuthTokenBridge() {
+  const { getToken, isSignedIn, isLoaded } = useAuth();
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      setAuthTokenGetter(async () => {
+        try {
+          return await getToken();
+        } catch {
+          return null;
+        }
+      });
+    } else {
+      setAuthTokenGetter(null);
+    }
+  }, [isLoaded, isSignedIn, getToken]);
+  return null;
 }
 
 function ClerkQueryClientCacheInvalidator() {
@@ -534,29 +661,77 @@ function ClientAccountProvisioner() {
 function AuthenticatedRouter() {
   const [location] = useLocation();
   const { language } = useLanguage();
-  return <ErrorBoundary resetKey={location}><Switch><Route path="/" component={HomeRedirect} /><Route path="/sign-in/*?" component={() => <AuthPage kind="sign-in" />} /><Route path="/sign-up/*?" component={() => <AuthPage kind="sign-up" />} /><Route path="/services/:slug">{() => <Shell><StructuredServiceDetailPage language={language} /></Shell>}</Route><Route path="/print-3d" component={PrintEstimator} /><Route path="/materials" component={MaterialsPage} /><Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route><Route path="/client" component={ClientPortalRoute} /><Route path="/client/printing" component={ClientPortalRoute} /><Route path="/client/consultations" component={ClientPortalRoute} /><Route path="/client/settings" component={ClientPortalRoute} /><Route component={NotFound} /></Switch></ErrorBoundary>;
+  return (
+    <ErrorBoundary resetKey={location}>
+      <Switch>
+        <Route path="/" component={HomeRedirect} />
+        <Route path="/sign-in/*?" component={() => <AuthPage kind="sign-in" />} />
+        <Route path="/sign-up/*?" component={() => <AuthPage kind="sign-up" />} />
+        <Route path="/admin-login" component={AdminLoginPage} />
+        <Route path="/admin-aj-industry/login" component={AdminLoginPage} />
+        <Route path="/services/:slug">{() => <Shell><StructuredServiceDetailPage language={language} /></Shell>}</Route>
+        <Route path="/print-3d" component={PrintEstimator} />
+        <Route path="/materials" component={MaterialsPage} />
+        <Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route>
+        <Route path="/client" component={ClientPortalRoute} />
+        <Route path="/client/printing" component={ClientPortalRoute} />
+        <Route path="/client/consultations" component={ClientPortalRoute} />
+        <Route path="/client/settings" component={ClientPortalRoute} />
+        {/* Admin Dashboard: /admin-aj-industry */}
+        <Route path="/admin-aj-industry" component={AdminPortalRoute} />
+        <Route path="/admin-aj-industry/printing" component={AdminPortalRoute} />
+        <Route path="/admin-aj-industry/consultations" component={AdminPortalRoute} />
+        <Route path="/admin-aj-industry/inquiries" component={AdminPortalRoute} />
+        <Route path="/admin-aj-industry/clients" component={AdminPortalRoute} />
+        <Route path="/admin-aj-industry/settings" component={AdminPortalRoute} />
+        {/* Alias /admin routes */}
+        <Route path="/admin" component={AdminPortalRoute} />
+        <Route path="/admin/printing" component={AdminPortalRoute} />
+        <Route path="/admin/consultations" component={AdminPortalRoute} />
+        <Route path="/admin/inquiries" component={AdminPortalRoute} />
+        <Route path="/admin/clients" component={AdminPortalRoute} />
+        <Route path="/admin/settings" component={AdminPortalRoute} />
+        <Route component={NotFound} />
+      </Switch>
+    </ErrorBoundary>
+  );
 }
 
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
-  return <ClerkProvider
-    publishableKey={clerkPubKey}
-    proxyUrl={clerkProxyUrl}
-    appearance={clerkAppearance}
-    signInUrl={`${basePath}/sign-in`}
-    signUpUrl={`${basePath}/sign-up`}
-    localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your client workspace' } }, signUp: { start: { title: 'Create your client account', subtitle: 'Keep your AJ project requests in one place' } } }}
-    routerPush={(to) => setLocation(stripBase(to))}
-    routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-  >
-    <ClerkQueryClientCacheInvalidator />
-    <ClientAccountProvisioner />
-    <AuthenticatedRouter />
-  </ClerkProvider>;
+
+  if (isClerkConfigured && clerkPubKey) {
+    return (
+      <ClerkProvider
+        publishableKey={clerkPubKey}
+        proxyUrl={clerkProxyUrl}
+        appearance={clerkAppearance}
+        signInUrl={`${basePath}/sign-in`}
+        signUpUrl={`${basePath}/sign-up`}
+        localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your client workspace' } }, signUp: { start: { title: 'Create your client account', subtitle: 'Keep your AJ project requests in one place' } } }}
+        routerPush={(to) => setLocation(stripBase(to))}
+        routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+      >
+        <MockAuthProvider>
+          <ClerkAuthTokenBridge />
+          <ClerkQueryClientCacheInvalidator />
+          <ClientAccountProvisioner />
+          <AuthenticatedRouter />
+        </MockAuthProvider>
+      </ClerkProvider>
+    );
+  }
+
+  return (
+    <MockAuthProvider>
+      <ClerkAuthTokenBridge />
+      <ClientAccountProvisioner />
+      <AuthenticatedRouter />
+    </MockAuthProvider>
+  );
 }
 
 function App() {
-  if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY');
   return <QueryClientProvider client={queryClient}><TooltipProvider><LanguageProvider><WouterRouter base={basePath}><ClerkProviderWithRoutes /></WouterRouter></LanguageProvider><Toaster /></TooltipProvider></QueryClientProvider>;
 }
 

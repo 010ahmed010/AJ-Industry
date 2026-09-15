@@ -4,11 +4,11 @@ import { clientText, ClientDataError, type ClientLanguage, PageIntro, Panel, Pan
 
 export function ClientSettingsPage() {
    const { language, setLanguage, profile, saveProfile, isSavingProfile, isLoading, error: dataError, refresh } = useClientDashboard();
-  const [name, setName] = useState(profile.name);
-  const [company, setCompany] = useState(profile.company);
+  const [name, setName] = useState(profile?.name || '');
+  const [company, setCompany] = useState(profile?.company || '');
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { setName(profile.name); setCompany(profile.company); }, [profile.name, profile.company]);
+  useEffect(() => { setName(profile?.name || ''); setCompany(profile?.company || ''); }, [profile?.name, profile?.company]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');

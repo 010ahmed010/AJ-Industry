@@ -1,0 +1,460 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { customFetch } from '@workspace/api-client-react';
+import {
+  Calendar,
+  Check,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  FileCode,
+  Filter,
+  Layers,
+  MessageSquare,
+  Printer,
+  RefreshCw,
+  Search,
+  Send,
+  Sparkles,
+  User,
+  X,
+} from 'lucide-react';
+import {
+  adminText,
+  StatusBadge,
+  type AdminPrintRequest,
+  type Language,
+} from './admin-dashboard-shell';
+
+export function AdminPrintingPage({ language }: { language: Language }) {
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<AdminPrintRequest | null>(null);
+
+  // Edit modal state
+  const [editStatus, setEditStatus] = useState<AdminPrintRequest['status']>('submitted');
+  const [editQuoteAmount, setEditQuoteAmount] = useState<string>('');
+  const [editQuoteCurrency, setEditQuoteCurrency] = useState<string>('USD');
+  const [editDeliveryDate, setEditDeliveryDate] = useState<string>('');
+  const [editFeedback, setEditFeedback] = useState<string>('');
+
+  const { data: requests = [], isLoading, isFetching, refetch } = useQuery<AdminPrintRequest[]>({
+    queryKey: ['admin-requests', statusFilter, search],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (search) params.set('search', search);
+      return customFetch<AdminPrintRequest[]>(`/api/admin/requests?${params.toString()}`);
+    },
+    refetchInterval: 8_000,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      status: AdminPrintRequest['status'];
+      quoteAmount?: number;
+      quoteCurrency?: string;
+      estimatedDelivery?: string;
+      adminFeedback?: string;
+    }) => {
+      return customFetch(`/api/admin/requests/${payload.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      void queryClient.invalidateQueries({ queryKey: ['client-requests'] });
+      void queryClient.invalidateQueries({ queryKey: ['client-overview'] });
+      setSelectedOrder(null);
+    },
+  });
+
+  const openEditModal = (order: AdminPrintRequest) => {
+    setSelectedOrder(order);
+    setEditStatus(order.status);
+    setEditQuoteAmount(order.quoteAmount !== undefined ? String(order.quoteAmount) : '');
+    setEditQuoteCurrency(order.quoteCurrency || 'USD');
+    setEditDeliveryDate(order.estimatedDelivery ? order.estimatedDelivery.slice(0, 10) : '');
+    setEditFeedback(order.adminFeedback || '');
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+
+    updateMutation.mutate({
+      id: selectedOrder.id,
+      status: editStatus,
+      quoteAmount: editQuoteAmount ? Number(editQuoteAmount) : undefined,
+      quoteCurrency: editQuoteCurrency,
+      estimatedDelivery: editDeliveryDate || undefined,
+      adminFeedback: editFeedback || undefined,
+    });
+  };
+
+  const filterTabs = [
+    { key: 'all', labelAr: 'الكل', labelEn: 'All' },
+    { key: 'submitted', labelAr: 'تم الاستلام', labelEn: 'Submitted' },
+    { key: 'reviewing', labelAr: 'قيد المراجعة', labelEn: 'Reviewing' },
+    { key: 'quoted', labelAr: 'تم التسعير', labelEn: 'Quoted' },
+    { key: 'scheduled', labelAr: 'مجدول للإنتاج', labelEn: 'Scheduled' },
+    { key: 'completed', labelAr: 'مكتمل', labelEn: 'Completed' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col justify-between gap-4 border-b border-border/80 pb-6 sm:flex-row sm:items-center">
+        <div>
+          <span className="font-code text-[10px] tracking-[.2em] text-primary">
+            ADMIN / 02 — 3D PRINTING WORK ORDERS
+          </span>
+          <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {adminText(language, 'إدارة طلبات الطباعة ثلاثية الأبعاد', '3D Print Orders Management')}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {adminText(
+              language,
+              'حدد الأسعار الهندسية، مواعيد التسليم، وملاحظات الإنتاج لكل طلب عميل. التحديثات تظهر فوراً للعميل في لوحته.',
+              'Set prices, delivery dates, and engineering notes. Changes update in the client dashboard immediately.',
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          className="flex h-9 items-center gap-2 border border-border bg-secondary/40 px-3.5 font-code text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin text-primary' : ''}`} />
+          <span>{adminText(language, 'تحديث', 'Refresh')}</span>
+        </button>
+      </div>
+
+      {/* Filter and Search Controls */}
+      <div className="flex flex-col gap-4 border border-border bg-[#0b1528] p-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Status Pills */}
+        <div className="flex flex-wrap items-center gap-1">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={`px-3 py-1.5 font-code text-xs transition-colors ${
+                statusFilter === tab.key
+                  ? 'bg-primary text-primary-foreground font-bold'
+                  : 'bg-secondary/40 text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              {adminText(language, tab.labelAr, tab.labelEn)}
+            </button>
+          ))}
+        </div>
+
+        {/* Search input */}
+        <div className="relative min-w-[240px]">
+          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={adminText(language, 'بحث بالمشروع أو المرجع أو العميل…', 'Search project, ref, client…')}
+            className="h-9 w-full border border-border bg-secondary/30 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Orders List */}
+      <div className="border border-border bg-[#0b1528]">
+        <div className="border-b border-border/80 px-6 py-4">
+          <p className="font-code text-xs text-muted-foreground">
+            {requests.length} {adminText(language, 'طلب مسجل في النظام', 'orders in database')}
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="p-12 text-center text-sm text-muted-foreground">
+            {adminText(language, 'جارٍ جلب الطلبات من قاعدة البيانات…', 'Loading orders from database…')}
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="p-12 text-center">
+            <Printer className="mx-auto size-8 text-muted-foreground/50" />
+            <p className="mt-3 font-display text-base font-bold text-foreground">
+              {adminText(language, 'لا توجد طلبات طباعة مطابقة', 'No matching print orders')}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {adminText(
+                language,
+                'يمكنك التبديل إلى مساحة العميل وإرسال طلب تجريبي لمشاهدة التزامن المباشر.',
+                'Switch to the Client View and create an order to see live real-time synchronization.',
+              )}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/60">
+            {requests.map((order) => (
+              <div
+                key={order.id}
+                className="flex flex-col gap-4 p-5 transition-colors hover:bg-secondary/20 lg:flex-row lg:items-center lg:justify-between"
+              >
+                {/* Order Information */}
+                <div className="space-y-2 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge
+                      status={order.status}
+                      statusAr={order.statusAr}
+                      statusEn={order.statusEn}
+                      language={language}
+                    />
+                    <span className="font-code text-xs text-primary font-bold">{order.reference}</span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+                        dateStyle: 'medium',
+                      })}
+                    </span>
+                  </div>
+
+                  <h3 className="font-display text-lg font-bold text-foreground">
+                    {order.projectName}
+                  </h3>
+
+                  {/* Specs row */}
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                    <span>
+                      {adminText(language, 'المادة:', 'Material:')}{' '}
+                      <strong className="text-foreground">{order.material}</strong>
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {adminText(language, 'الكمية:', 'Quantity:')}{' '}
+                      <strong className="text-foreground">{order.quantity} {adminText(language, 'قطعة', 'pcs')}</strong>
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {adminText(language, 'التشطيب:', 'Finish:')}{' '}
+                      <strong className="text-foreground">{order.finish}</strong>
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {adminText(language, 'الجدول:', 'Timeline:')}{' '}
+                      <strong className="text-foreground">{order.timeline}</strong>
+                    </span>
+                    {order.fileName && (
+                      <>
+                        <span>·</span>
+                        <span className="flex items-center gap-1 text-primary">
+                          <FileCode className="size-3.5" />
+                          {order.fileName}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Client identity */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <User className="size-3.5 text-primary" />
+                    <span className="font-semibold text-foreground">{order.client.name}</span>
+                    {order.client.company && (
+                      <span className="border border-border/80 bg-secondary/50 px-1.5 py-0.5 font-code text-[10px]">
+                        {order.client.company}
+                      </span>
+                    )}
+                    <span>({order.client.email})</span>
+                  </div>
+
+                  {/* Quote or Admin Feedback if present */}
+                  {(order.quoteAmount !== undefined || order.adminFeedback) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-border/40 pt-2 text-xs">
+                      {order.quoteAmount !== undefined && (
+                        <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                          <DollarSign className="size-3.5" />
+                          {adminText(language, 'التسعير المعتمد:', 'Quoted:')} {order.quoteAmount} {order.quoteCurrency || 'USD'}
+                        </span>
+                      )}
+                      {order.estimatedDelivery && (
+                        <span className="flex items-center gap-1 text-cyan-400">
+                          <Clock className="size-3.5" />
+                          {adminText(language, 'التسليم المتوقع:', 'Est. Delivery:')} {new Date(order.estimatedDelivery).toLocaleDateString()}
+                        </span>
+                      )}
+                      {order.adminFeedback && (
+                        <span className="text-muted-foreground italic truncate max-w-md">
+                          "{order.adminFeedback}"
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action button */}
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(order)}
+                    className="flex h-10 items-center gap-2 bg-primary px-4 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5"
+                  >
+                    <DollarSign className="size-3.5" />
+                    <span>{adminText(language, 'تسعير / تحديث الطلب', 'Price & Update')}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Edit / Quote Modal */}
+      {selectedOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-xl border border-border bg-[#0b1528] shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-border p-6">
+              <div>
+                <span className="font-code text-[10px] tracking-[.2em] text-primary">
+                  ADMIN ACTION / {selectedOrder.reference}
+                </span>
+                <h2 className="mt-1 font-display text-xl font-bold text-foreground">
+                  {adminText(language, 'تحديث وتسعير الطلب', 'Update & Quote Order')}
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {selectedOrder.projectName} — {selectedOrder.client.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="grid size-8 place-items-center border border-border text-muted-foreground hover:border-primary hover:text-primary"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSave} className="space-y-4 p-6">
+              {/* Status Select */}
+              <div>
+                <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                  {adminText(language, 'حالة الطلب', 'Workflow Status')}
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                >
+                  <option value="submitted">{adminText(language, 'تم الاستلام (Submitted)', 'Submitted / Received')}</option>
+                  <option value="reviewing">{adminText(language, 'قيد المراجعة الهندسية (Reviewing)', 'Reviewing')}</option>
+                  <option value="quoted">{adminText(language, 'تم التسعير (Quoted)', 'Quoted')}</option>
+                  <option value="scheduled">{adminText(language, 'مجدول للإنتاج (Scheduled)', 'Scheduled for production')}</option>
+                  <option value="completed">{adminText(language, 'مكتمل وجاهز للتسليم (Completed)', 'Completed')}</option>
+                </select>
+              </div>
+
+              {/* Price & Currency */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                    {adminText(language, 'قيمة التسعير', 'Quote Amount')}
+                  </label>
+                  <div className="relative mt-1.5">
+                    <DollarSign className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editQuoteAmount}
+                      onChange={(e) => setEditQuoteAmount(e.target.value)}
+                      placeholder="e.g. 450.00"
+                      className="h-10 w-full border border-border bg-secondary/40 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                    {adminText(language, 'العملة', 'Currency')}
+                  </label>
+                  <select
+                    value={editQuoteCurrency}
+                    onChange={(e) => setEditQuoteCurrency(e.target.value)}
+                    className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="SAR">SAR (ر.س)</option>
+                    <option value="EUR">EUR (€)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Estimated Delivery */}
+              <div>
+                <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                  {adminText(language, 'موعد التسليم المتوقع', 'Estimated Delivery Date')}
+                </label>
+                <div className="relative mt-1.5">
+                  <Calendar className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="date"
+                    value={editDeliveryDate}
+                    onChange={(e) => setEditDeliveryDate(e.target.value)}
+                    className="h-10 w-full border border-border bg-secondary/40 pl-9 pr-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Admin Feedback / Engineering Notes */}
+              <div>
+                <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                  {adminText(language, 'ملاحظات المهندس المشرف (تظهر للعميل)', 'Engineering Feedback (Visible to client)')}
+                </label>
+                <textarea
+                  rows={3}
+                  value={editFeedback}
+                  onChange={(e) => setEditFeedback(e.target.value)}
+                  placeholder={adminText(
+                    language,
+                    'أدخل توجيهات التصنيع، دقة الطبقة، أو تفاصيل الشحن…',
+                    'Manufacturing instructions, layer height notes, shipping details…',
+                  )}
+                  className="mt-1.5 w-full border border-border bg-secondary/40 p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="h-10 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+                >
+                  {adminText(language, 'إلغاء', 'Cancel')}
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="flex h-10 items-center gap-2 bg-primary px-5 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+                >
+                  {updateMutation.isPending ? (
+                    <RefreshCw className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  <span>{adminText(language, 'حفظ وتحديث العميل', 'Save & Update Client')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

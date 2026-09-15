@@ -1,0 +1,373 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { customFetch } from '@workspace/api-client-react';
+import {
+  Calendar,
+  Check,
+  Clock,
+  ExternalLink,
+  Filter,
+  Layers,
+  MessageSquare,
+  RefreshCw,
+  Search,
+  Send,
+  User,
+  UserCheck,
+  Users,
+  X,
+} from 'lucide-react';
+import {
+  adminText,
+  StatusBadge,
+  type AdminConsultation,
+  type Language,
+} from './admin-dashboard-shell';
+
+export function AdminConsultationsPage({ language }: { language: Language }) {
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedConsultation, setSelectedConsultation] = useState<AdminConsultation | null>(null);
+
+  // Edit fields
+  const [editStatus, setEditStatus] = useState<AdminConsultation['status']>('submitted');
+  const [editSpecialist, setEditSpecialist] = useState('');
+  const [editMeetingDate, setEditMeetingDate] = useState('');
+  const [editResponse, setEditResponse] = useState('');
+
+  const { data: consultations = [], isLoading, isFetching, refetch } = useQuery<AdminConsultation[]>({
+    queryKey: ['admin-consultations', statusFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      return customFetch<AdminConsultation[]>(`/api/admin/consultations?${params.toString()}`);
+    },
+    refetchInterval: 8_000,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      status: AdminConsultation['status'];
+      assignedSpecialist?: string;
+      meetingScheduledAt?: string;
+      adminResponse?: string;
+    }) => {
+      return customFetch(`/api/admin/consultations/${payload.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-consultations'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      void queryClient.invalidateQueries({ queryKey: ['client-consultations'] });
+      setSelectedConsultation(null);
+    },
+  });
+
+  const openEditModal = (c: AdminConsultation) => {
+    setSelectedConsultation(c);
+    setEditStatus(c.status);
+    setEditSpecialist(c.assignedSpecialist || 'م. أحمد الجابري (كبير المهندسين)');
+    setEditMeetingDate(c.meetingScheduledAt ? c.meetingScheduledAt.slice(0, 16) : '');
+    setEditResponse(c.adminResponse || '');
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedConsultation) return;
+
+    updateMutation.mutate({
+      id: selectedConsultation.id,
+      status: editStatus,
+      assignedSpecialist: editSpecialist || undefined,
+      meetingScheduledAt: editMeetingDate || undefined,
+      adminResponse: editResponse || undefined,
+    });
+  };
+
+  const filterTabs = [
+    { key: 'all', labelAr: 'الكل', labelEn: 'All' },
+    { key: 'submitted', labelAr: 'جديد / استلام', labelEn: 'Submitted' },
+    { key: 'reviewing', labelAr: 'قيد الدراسة', labelEn: 'Reviewing' },
+    { key: 'contacted', labelAr: 'تم التواصل', labelEn: 'Contacted' },
+    { key: 'completed', labelAr: 'منجز', labelEn: 'Completed' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col justify-between gap-4 border-b border-border/80 pb-6 sm:flex-row sm:items-center">
+        <div>
+          <span className="font-code text-[10px] tracking-[.2em] text-primary">
+            ADMIN / 03 — ENGINEERING CONSULTATIONS
+          </span>
+          <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {adminText(language, 'إدارة الاستشارات والخبراء الهندسيين', 'Engineering Consultations Desk')}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {adminText(
+              language,
+              'مراجعة استشارات العملاء، تعيين المهندس المشرف، وجدولة المواعيد مع العميل.',
+              'Review technical requests, assign lead specialists, and coordinate advisory sessions with clients.',
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          className="flex h-9 items-center gap-2 border border-border bg-secondary/40 px-3.5 font-code text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin text-primary' : ''}`} />
+          <span>{adminText(language, 'تحديث', 'Refresh')}</span>
+        </button>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-1 border border-border bg-[#0b1528] p-4">
+        {filterTabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setStatusFilter(tab.key)}
+            className={`px-3 py-1.5 font-code text-xs transition-colors ${
+              statusFilter === tab.key
+                ? 'bg-primary text-primary-foreground font-bold'
+                : 'bg-secondary/40 text-muted-foreground hover:bg-secondary hover:text-foreground'
+            }`}
+          >
+            {adminText(language, tab.labelAr, tab.labelEn)}
+          </button>
+        ))}
+      </div>
+
+      {/* Consultations List */}
+      <div className="border border-border bg-[#0b1528]">
+        <div className="border-b border-border/80 px-6 py-4">
+          <p className="font-code text-xs text-muted-foreground">
+            {consultations.length} {adminText(language, 'استشارة مسجلة', 'consultations registered')}
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="p-12 text-center text-sm text-muted-foreground">
+            {adminText(language, 'جارٍ تحميل الاستشارات…', 'Loading consultations…')}
+          </div>
+        ) : consultations.length === 0 ? (
+          <div className="p-12 text-center">
+            <MessageSquare className="mx-auto size-8 text-muted-foreground/50" />
+            <p className="mt-3 font-display text-base font-bold text-foreground">
+              {adminText(language, 'لا توجد طلبات استشارة حالياً', 'No consultations found')}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {adminText(
+                language,
+                'يمكن للعملاء تقديم استشارات هندسية عبر لوحة العميل وستظهر هنا فوراً.',
+                'Clients can submit consultations from their workspace and they will appear here immediately.',
+              )}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/60">
+            {consultations.map((c) => (
+              <div
+                key={c.id}
+                className="flex flex-col gap-4 p-5 transition-colors hover:bg-secondary/20 lg:flex-row lg:items-center lg:justify-between"
+              >
+                <div className="space-y-2 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge
+                      status={c.status}
+                      statusAr={c.statusAr}
+                      statusEn={c.statusEn}
+                      language={language}
+                    />
+                    <span className="font-code text-xs text-primary font-bold">{c.reference}</span>
+                    <span className="border border-border/80 bg-secondary/50 px-2 py-0.5 font-code text-[10px] text-muted-foreground">
+                      {c.kind === 'specialist'
+                        ? adminText(language, 'طلب متخصص', 'Specialist')
+                        : adminText(language, 'استشارة عامة', 'Consultation')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(c.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+                        dateStyle: 'medium',
+                      })}
+                    </span>
+                  </div>
+
+                  <h3 className="font-display text-lg font-bold text-foreground">{c.title}</h3>
+                  <p className="text-xs leading-relaxed text-muted-foreground max-w-2xl whitespace-pre-line">
+                    {c.details}
+                  </p>
+
+                  {/* Client Info */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                    <User className="size-3.5 text-primary" />
+                    <span className="font-semibold text-foreground">{c.client.name}</span>
+                    {c.client.company && (
+                      <span className="border border-border/80 bg-secondary/50 px-1.5 py-0.5 font-code text-[10px]">
+                        {c.client.company}
+                      </span>
+                    )}
+                    <span>({c.client.email})</span>
+                  </div>
+
+                  {/* Admin feedback / scheduled meeting */}
+                  {(c.adminResponse || c.assignedSpecialist || c.meetingScheduledAt) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-border/40 pt-2 text-xs">
+                      {c.assignedSpecialist && (
+                        <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                          <UserCheck className="size-3.5" />
+                          {adminText(language, 'المهندس المشرف:', 'Specialist:')} {c.assignedSpecialist}
+                        </span>
+                      )}
+                      {c.meetingScheduledAt && (
+                        <span className="flex items-center gap-1 text-cyan-400">
+                          <Clock className="size-3.5" />
+                          {adminText(language, 'الموعد:', 'Scheduled:')} {new Date(c.meetingScheduledAt).toLocaleString()}
+                        </span>
+                      )}
+                      {c.adminResponse && (
+                        <span className="text-muted-foreground italic truncate max-w-md">
+                          "{c.adminResponse}"
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(c)}
+                    className="flex h-10 items-center gap-2 bg-primary px-4 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5"
+                  >
+                    <MessageSquare className="size-3.5" />
+                    <span>{adminText(language, 'الرد وجدولة اللقاء', 'Reply & Schedule')}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Edit Modal */}
+      {selectedConsultation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-xl border border-border bg-[#0b1528] shadow-2xl">
+            <div className="flex items-start justify-between border-b border-border p-6">
+              <div>
+                <span className="font-code text-[10px] tracking-[.2em] text-primary">
+                  CONSULTATION / {selectedConsultation.reference}
+                </span>
+                <h2 className="mt-1 font-display text-xl font-bold text-foreground">
+                  {adminText(language, 'الرد على الاستشارة الهندسية', 'Respond to Consultation')}
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {selectedConsultation.title} — {selectedConsultation.client.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedConsultation(null)}
+                className="grid size-8 place-items-center border border-border text-muted-foreground hover:border-primary hover:text-primary"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-4 p-6">
+              <div>
+                <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                  {adminText(language, 'حالة الاستشارة', 'Consultation Status')}
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                >
+                  <option value="submitted">{adminText(language, 'تم الاستلام (Submitted)', 'Submitted')}</option>
+                  <option value="reviewing">{adminText(language, 'قيد المراجعة والتحضير (Reviewing)', 'Reviewing')}</option>
+                  <option value="contacted">{adminText(language, 'تم التواصل والجدولة (Contacted)', 'Contacted & Scheduled')}</option>
+                  <option value="completed">{adminText(language, 'تم إنجاز الاستشارة (Completed)', 'Completed')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                  {adminText(language, 'المهندس أو الخبير المشرف', 'Assigned Specialist / Lead Engineer')}
+                </label>
+                <input
+                  type="text"
+                  value={editSpecialist}
+                  onChange={(e) => setEditSpecialist(e.target.value)}
+                  placeholder="e.g. Eng. Ahmed Al-Jabri (Senior Mechatronics)"
+                  className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                  {adminText(language, 'موعد الجلسة الاستشارية / الاتصال', 'Meeting / Session Date & Time')}
+                </label>
+                <input
+                  type="datetime-local"
+                  value={editMeetingDate}
+                  onChange={(e) => setEditMeetingDate(e.target.value)}
+                  className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
+                  {adminText(language, 'رد وتوجيهات الفريق الهندسي للعميل', 'Engineering Response to Client')}
+                </label>
+                <textarea
+                  rows={4}
+                  value={editResponse}
+                  onChange={(e) => setEditResponse(e.target.value)}
+                  placeholder={adminText(
+                    language,
+                    'اكتب التوجيهات الهندسية، رابط اجتماع Google Meet / Zoom، أو أي استفسارات موجهة للعميل…',
+                    'Technical feedback, Google Meet / Zoom link, or instructions for the client…',
+                  )}
+                  className="mt-1.5 w-full border border-border bg-secondary/40 p-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedConsultation(null)}
+                  className="h-10 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+                >
+                  {adminText(language, 'إلغاء', 'Cancel')}
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="flex h-10 items-center gap-2 bg-primary px-5 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+                >
+                  {updateMutation.isPending ? (
+                    <RefreshCw className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  <span>{adminText(language, 'حفظ الرد وإرساله', 'Save Response')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

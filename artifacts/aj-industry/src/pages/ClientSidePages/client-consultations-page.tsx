@@ -60,15 +60,50 @@ function ConsultationHistory({ consultations, language }: { consultations: Clien
     return <div className="p-6 text-sm leading-7 text-muted-foreground">{clientText(language, 'لا توجد طلبات استشارة بعد. أرسل طلبك الأول من الأقسام أعلاه.', 'No consultation requests yet. Send your first request from the sections above.')}</div>;
   }
   return <div className="divide-y divide-border/70">
-    {consultations.map((consultation) => <div key={consultation.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2"><Tag tone={consultation.status === 'completed' ? 'green' : consultation.status === 'submitted' ? 'amber' : 'blue'}>{statusLabel(language, consultation)}</Tag><span className="font-code text-[9px] text-muted-foreground">{consultation.reference}</span></div>
-        <p className="mt-3 font-display text-lg font-bold">{consultation.title}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{kindLabel(language, consultation.kind)}{consultation.specialty ? ` · ${consultation.specialty}` : ''}</p>
-        <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{consultation.details}</p>
-      </div>
-      <span className="flex shrink-0 items-center gap-2 font-code text-[9px] text-muted-foreground"><Clock3 className="size-3.5" />{new Date(consultation.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}</span>
-    </div>)}
+    {consultations.map((consultation) => {
+      const c = consultation as any;
+      return (
+        <div key={consultation.id} className="flex flex-col gap-3 p-5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Tag tone={consultation.status === 'completed' ? 'green' : consultation.status === 'submitted' ? 'amber' : 'blue'}>{statusLabel(language, consultation)}</Tag>
+                <span className="font-code text-[9px] text-muted-foreground">{consultation.reference}</span>
+              </div>
+              <p className="mt-3 font-display text-lg font-bold">{consultation.title}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{kindLabel(language, consultation.kind)}{consultation.specialty ? ` · ${consultation.specialty}` : ''}</p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{consultation.details}</p>
+            </div>
+            <span className="flex shrink-0 items-center gap-2 font-code text-[9px] text-muted-foreground"><Clock3 className="size-3.5" />{new Date(consultation.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}</span>
+          </div>
+
+          {(c.adminResponse || c.assignedSpecialist || c.meetingScheduledAt) && (
+            <div className="mt-3 border border-primary/30 bg-primary/10 p-4 space-y-2">
+              <p className="font-code text-[10px] uppercase text-primary font-bold">
+                {clientText(language, 'رد ومتابعة الفريق الهندسي', 'ENGINEERING TEAM RESPONSE')}
+              </p>
+              {c.assignedSpecialist && (
+                <p className="text-xs text-foreground font-semibold">
+                  {clientText(language, 'المهندس المسؤول:', 'Assigned Specialist:')}{' '}
+                  <span className="text-primary">{c.assignedSpecialist}</span>
+                </p>
+              )}
+              {c.meetingScheduledAt && (
+                <p className="text-xs text-foreground">
+                  {clientText(language, 'موعد الجلسة الاستشارية:', 'Scheduled Meeting:')}{' '}
+                  <span className="text-accent font-semibold">{new Date(c.meetingScheduledAt).toLocaleString()}</span>
+                </p>
+              )}
+              {c.adminResponse && (
+                <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap">
+                  {c.adminResponse}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    })}
   </div>;
 }
 
