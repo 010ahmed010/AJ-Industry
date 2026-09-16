@@ -6,6 +6,7 @@ import { AdminPrintingPage } from './admin-printing-page';
 import { AdminConsultationsPage } from './admin-consultations-page';
 import { AdminInquiriesPage } from './admin-inquiries-page';
 import { AdminClientsPage } from './admin-clients-page';
+import { AdminServicesPage } from './admin-services-page';
 import { AdminSettingsPage } from './admin-settings-page';
 
 export function AdminDashboardPage() {
@@ -28,6 +29,9 @@ export function AdminDashboardPage() {
   const renderSection = () => {
     if (location.includes('/settings')) {
       return <AdminSettingsPage language={language} />;
+    }
+    if (location.includes('/services')) {
+      return <AdminServicesPage language={language} />;
     }
     if (location.includes('/printing')) {
       return <AdminPrintingPage language={language} />;
@@ -60,6 +64,7 @@ export * from './admin-overview-page';
 export * from './admin-printing-page';
 export * from './admin-consultations-page';
 export * from './admin-inquiries-page';
+export * from './admin-services-page';
 export * from './admin-clients-page';
 export * from './admin-settings-page';
 export * from './admin-login-page';

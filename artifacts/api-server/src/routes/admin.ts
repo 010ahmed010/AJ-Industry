@@ -1,6 +1,14 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getMongoDb } from "../lib/mongo";
 import { validateSession } from "../lib/auth-service";
+import {
+  getAllServices,
+  getServiceBySlug,
+  createService,
+  updateService,
+  deleteService,
+  resetServicesToDefaults,
+} from "../lib/services-store";
 
 const router: IRouter = Router();
 
@@ -464,6 +472,160 @@ router.get("/admin/clients", async (req: Request, res: Response): Promise<void> 
     res.json(clientsWithStats);
   } catch (err: any) {
     res.status(500).json({ error: "Failed to fetch clients", details: err?.message });
+  }
+});
+
+// ==========================================
+// Service Management Endpoints (Admin)
+// ==========================================
+
+// GET /api/admin/services - List all services with full detail
+router.get("/admin/services", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  try {
+    const list = await getAllServices();
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to load services", details: err?.message });
+  }
+});
+
+// GET /api/admin/services/:slug - Get single service
+router.get("/admin/services/:slug", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  try {
+    const service = await getServiceBySlug(req.params.slug);
+    if (!service) {
+      res.status(404).json({ error: "Service not found" });
+      return;
+    }
+    res.json(service);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to load service", details: err?.message });
+  }
+});
+
+// POST /api/admin/services - Create a new service
+router.post("/admin/services", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  const {
+    slug,
+    titleAr,
+    titleEn,
+    descriptionAr,
+    descriptionEn,
+    category,
+    duration,
+    accent,
+    highlightsAr,
+    highlightsEn,
+    workflowAr,
+    workflowEn,
+    gallery,
+    order,
+  } = req.body;
+
+  if (!titleAr || !titleEn) {
+    res.status(400).json({ error: "titleAr and titleEn are required" });
+    return;
+  }
+
+  const safeSlug =
+    slug?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
+    titleEn.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
+    `service-${Date.now()}`;
+
+  try {
+    const newService = await createService({
+      slug: safeSlug,
+      titleAr: titleAr.trim(),
+      titleEn: titleEn.trim(),
+      descriptionAr: descriptionAr || "",
+      descriptionEn: descriptionEn || "",
+      category: category || "Machine design",
+      duration: duration || "2–4 weeks",
+      accent: accent || "cyan",
+      highlightsAr: Array.isArray(highlightsAr) ? highlightsAr : [],
+      highlightsEn: Array.isArray(highlightsEn) ? highlightsEn : [],
+      workflowAr: Array.isArray(workflowAr) ? workflowAr : [],
+      workflowEn: Array.isArray(workflowEn) ? workflowEn : [],
+      gallery: Array.isArray(gallery) ? gallery.slice(0, 3) : [],
+      order: typeof order === "number" ? order : undefined,
+    });
+
+    res.status(201).json(newService);
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message || "Failed to create service" });
+  }
+});
+
+// PUT /api/admin/services/:slug - Update an existing service
+router.put("/admin/services/:slug", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  const { slug } = req.params;
+  const updates = req.body;
+
+  try {
+    const updated = await updateService(slug, updates);
+    if (!updated) {
+      res.status(404).json({ error: "Service not found" });
+      return;
+    }
+    res.json(updated);
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message || "Failed to update service" });
+  }
+});
+
+// DELETE /api/admin/services/:slug - Delete a service
+router.delete("/admin/services/:slug", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  const { slug } = req.params;
+
+  try {
+    const success = await deleteService(slug);
+    if (!success) {
+      res.status(404).json({ error: "Service not found" });
+      return;
+    }
+    res.json({ success: true, message: `Service ${slug} deleted successfully` });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to delete service", details: err?.message });
+  }
+});
+
+// POST /api/admin/services/reset - Reset to default 6 services
+router.post("/admin/services/reset", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  try {
+    const list = await resetServicesToDefaults();
+    res.json({ success: true, services: list });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to reset services", details: err?.message });
   }
 });
 

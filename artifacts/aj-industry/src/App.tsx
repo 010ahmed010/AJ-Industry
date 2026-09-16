@@ -702,6 +702,7 @@ function AuthenticatedRouter() {
         <Route path="/client/settings" component={ClientPortalRoute} />
         {/* Admin Dashboard: /admin-aj-industry */}
         <Route path="/admin-aj-industry" component={AdminPortalRoute} />
+        <Route path="/admin-aj-industry/services" component={AdminPortalRoute} />
         <Route path="/admin-aj-industry/printing" component={AdminPortalRoute} />
         <Route path="/admin-aj-industry/consultations" component={AdminPortalRoute} />
         <Route path="/admin-aj-industry/inquiries" component={AdminPortalRoute} />
@@ -709,6 +710,7 @@ function AuthenticatedRouter() {
         <Route path="/admin-aj-industry/settings" component={AdminPortalRoute} />
         {/* Alias /admin routes */}
         <Route path="/admin" component={AdminPortalRoute} />
+        <Route path="/admin/services" component={AdminPortalRoute} />
         <Route path="/admin/printing" component={AdminPortalRoute} />
         <Route path="/admin/consultations" component={AdminPortalRoute} />
         <Route path="/admin/inquiries" component={AdminPortalRoute} />

@@ -250,17 +250,24 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Inbox,
   },
   {
+    href: '/admin-aj-industry/services',
+    labelAr: 'إدارة الخدمات',
+    labelEn: 'Services',
+    code: '05',
+    icon: Layers,
+  },
+  {
     href: '/admin-aj-industry/clients',
     labelAr: 'دليل العملاء',
     labelEn: 'Clients',
-    code: '05',
+    code: '06',
     icon: Users,
   },
   {
     href: '/admin-aj-industry/settings',
     labelAr: 'إعدادات الإدارة والأمان',
     labelEn: 'Settings & Security',
-    code: '06',
+    code: '07',
     icon: Settings,
   },
 ];
