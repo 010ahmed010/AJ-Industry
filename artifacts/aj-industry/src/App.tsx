@@ -8,7 +8,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getGetClientProfileQueryKey, useCreateInquiry, useCreatePrintEstimate, useGetClientProfile, useGetHomeContent, useGetService, useListMaterials, useListServices, setAuthTokenGetter } from '@workspace/api-client-react';
-import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, LayoutDashboard, Lock, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Shield, Sparkles, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Globe, LayoutDashboard, Lock, LogOut, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Shield, Sparkles, X, Zap } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
@@ -167,7 +167,8 @@ function Header() {
         {navigation.map((item) => <Link key={item.href} href={item.href} className="rounded-md px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" data-testid={`link-nav-${item.en.toLowerCase().replaceAll(' ', '-')}`}>{display(language, item.ar, item.en)}</Link>)}
       </nav>
       <div className="flex items-center gap-2">
-        <button type="button" onClick={toggle} className="group flex h-9 items-center gap-2 border border-border bg-secondary/50 px-3 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary" data-testid="button-language-toggle" aria-label={display(language, 'تبديل اللغة إلى الإنجليزية', 'Switch language to Arabic')}>
+        {/* Language toggle - Desktop only (available in mobile drawer on mobile) */}
+        <button type="button" onClick={toggle} className="group hidden h-9 items-center gap-2 border border-border bg-secondary/50 px-3 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary md:flex" data-testid="button-language-toggle" aria-label={display(language, 'تبديل اللغة إلى الإنجليزية', 'Switch language to Arabic')}>
           <span className="font-code text-[10px] text-primary">{language === 'ar' ? 'AR' : 'EN'}</span>
           <span className="hidden text-muted-foreground sm:inline">{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
@@ -177,7 +178,7 @@ function Header() {
               <Link
                 href="/admin-aj-industry"
                 onClick={close}
-                className="flex h-9 items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-400 transition-colors hover:bg-amber-500/20"
+                className="hidden h-9 items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-400 transition-colors hover:bg-amber-500/20 md:flex"
                 data-testid="link-header-admin-dashboard"
               >
                 <Shield className="size-3.5" />
@@ -187,7 +188,7 @@ function Header() {
               <Link
                 href="/client"
                 onClick={close}
-                className="flex h-9 items-center gap-1.5 border border-primary/50 bg-primary/10 px-3.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                className="hidden h-9 items-center gap-1.5 border border-primary/50 bg-primary/10 px-3.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20 md:flex"
                 data-testid="link-header-dashboard"
               >
                 <LayoutDashboard className="size-3.5" />
@@ -197,7 +198,7 @@ function Header() {
             <button
               type="button"
               onClick={() => signOut({ redirectUrl: basePath || '/' })}
-              className="flex h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary md:flex"
               data-testid="button-header-sign-out"
             >
               {display(language, 'تسجيل الخروج', 'Sign out')}
@@ -208,7 +209,7 @@ function Header() {
             <Link
               href="/sign-in"
               onClick={close}
-              className="flex h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary md:flex"
               data-testid="link-header-sign-in"
             >
               {display(language, 'تسجيل الدخول', 'Sign in')}
@@ -216,22 +217,40 @@ function Header() {
             <Link
               href="/sign-up"
               onClick={close}
-              className="hidden h-9 items-center bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 sm:flex"
+              className="hidden h-9 items-center bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 md:flex"
               data-testid="link-header-sign-up"
             >
               {display(language, 'إنشاء حساب', 'Create account')}
             </Link>
           </>
         ) : null}
-        <Link href="/#contact" className="hidden h-9 items-center gap-2 bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 sm:flex" data-testid="link-header-contact">
+        <Link href="/#contact" className="hidden h-9 items-center gap-2 bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 md:flex" data-testid="link-header-contact">
           {display(language, 'ابدأ مشروعك', 'Start a project')} <ArrowUpRight className="size-3.5" />
         </Link>
-        <button type="button" onClick={() => setOpen((value) => !value)} className="grid size-9 place-items-center border border-border text-muted-foreground md:hidden" data-testid="button-mobile-menu" aria-expanded={open}>
+        <button type="button" onClick={() => setOpen((value) => !value)} className="grid size-9 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary md:hidden" data-testid="button-mobile-menu" aria-expanded={open} aria-label={open ? display(language, 'إغلاق القائمة', 'Close menu') : display(language, 'فتح القائمة', 'Open menu')}>
           {open ? <X className="size-4" /> : <Menu className="size-4" />}
         </button>
       </div>
     </div>
-    {open && <nav className="border-t border-border bg-background px-5 py-3 md:hidden" aria-label="Mobile navigation">
+    {open && <nav className="border-t border-border bg-background px-5 py-4 shadow-xl md:hidden" aria-label="Mobile navigation">
+      {/* Mobile Language Switcher Row */}
+      <div className="mb-3 flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <Globe className="size-4 text-primary" />
+          <span>{display(language, 'اللغة', 'Language')}</span>
+        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex h-8 items-center gap-2 border border-border bg-secondary/50 px-3 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary"
+          data-testid="button-mobile-language"
+          aria-label={display(language, 'تبديل اللغة', 'Toggle language')}
+        >
+          <span className="font-code text-[10px] text-primary">{language === 'ar' ? 'العربية' : 'English'}</span>
+          <span className="text-[10px] text-muted-foreground">({language === 'ar' ? 'AR' : 'EN'})</span>
+        </button>
+      </div>
+
       {isLoaded && isSignedIn && (
         <div className="mb-3 space-y-2 border-b border-border/60 pb-3">
           {user?.role === 'admin' ? (
@@ -263,7 +282,7 @@ function Header() {
           <Link
             href="/sign-in"
             onClick={close}
-            className="flex-1 border border-border py-2.5 text-center text-xs font-semibold text-muted-foreground"
+            className="flex-1 border border-border py-2.5 text-center text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
             data-testid="link-mobile-sign-in"
           >
             {display(language, 'تسجيل الدخول', 'Sign in')}
@@ -285,10 +304,11 @@ function Header() {
             close();
             signOut({ redirectUrl: basePath || '/' });
           }}
-          className="mt-2 w-full border border-border py-2 text-center text-xs font-semibold text-muted-foreground"
+          className="mt-3 flex w-full items-center justify-center gap-2 border border-border py-2.5 text-center text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
           data-testid="button-mobile-sign-out"
         >
-          {display(language, 'تسجيل الخروج', 'Sign out')}
+          <LogOut className="size-3.5" />
+          <span>{display(language, 'تسجيل الخروج', 'Sign out')}</span>
         </button>
       )}
       <Link href="/#contact" onClick={close} className="mt-3 flex items-center justify-center gap-2 bg-primary py-3 text-sm font-bold text-primary-foreground" data-testid="link-mobile-contact">{display(language, 'اطلب استشارة', 'Request a consultation')} <ArrowUpRight className="size-4" /></Link>

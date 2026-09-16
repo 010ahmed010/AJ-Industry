@@ -324,10 +324,8 @@ export function AdminSidebar({
     <div className="flex h-full min-h-0 flex-col">
       {/* Brand Header */}
       <div
-        className={`flex border-b border-border/70 ${
-          collapsed
-            ? 'h-[92px] flex-col items-center justify-center gap-2 px-2 py-2'
-            : 'h-[78px] items-center justify-between px-4'
+        className={`flex h-[70px] border-b border-border/70 px-4 ${
+          collapsed ? 'items-center justify-center' : 'items-center justify-start'
         }`}
       >
         <Link
@@ -337,27 +335,6 @@ export function AdminSidebar({
         >
           <AdminBrandMark compact={collapsed} />
         </Link>
-        <button
-          type="button"
-          onClick={onCollapse}
-          className="grid size-8 shrink-0 place-items-center border border-border bg-secondary/30 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
-          aria-label={
-            collapsed
-              ? adminText(language, 'توسيع الشريط الجانبي (عرض الأسماء والأيقونات)', 'Expand sidebar (show icons & names)')
-              : adminText(language, 'طي الشريط الجانبي (أيقونات فقط)', 'Collapse sidebar (icons only)')
-          }
-          title={
-            collapsed
-              ? adminText(language, 'توسيع الشريط الجانبي (عرض الأسماء والأيقونات)', 'Expand sidebar (show icons & names)')
-              : adminText(language, 'طي الشريط الجانبي (أيقونات فقط)', 'Collapse sidebar (icons only)')
-          }
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="size-4 rtl:rotate-180" />
-          ) : (
-            <PanelLeftClose className="size-4 rtl:rotate-180" />
-          )}
-        </button>
       </div>
 
       {/* Admin User Profile */}
@@ -586,8 +563,8 @@ export function AdminDashboardShell({
         onToggleLanguage={onToggleLanguage}
       />
       <div
-        className={`min-h-[100dvh] transition-[padding] duration-300 lg:ps-[256px] ${
-          collapsed ? 'lg:ps-[76px]' : ''
+        className={`min-h-[100dvh] transition-all duration-300 ease-in-out ${
+          collapsed ? 'lg:ps-[76px]' : 'lg:ps-[256px]'
         }`}
       >
         <header className="sticky top-0 z-40 flex h-[70px] items-center justify-between border-b border-border/80 bg-[#071126]/90 px-5 backdrop-blur-xl lg:px-8">
@@ -626,7 +603,7 @@ export function AdminDashboardShell({
               <span>AJ ADMIN / {getSectionTitle().toUpperCase()}</span>
             </div>
             <div className="sm:hidden">
-              <AdminBrandMark compact={false} />
+              <AdminBrandMark compact={true} />
             </div>
           </div>
 
@@ -658,10 +635,10 @@ export function AdminDashboardShell({
           </div>
         </header>
 
-        <main className="relative overflow-hidden px-5 py-8 sm:px-8 lg:px-10">
+        <main className="relative w-full overflow-hidden px-5 py-8 sm:px-8 lg:px-10">
           <div className="pointer-events-none absolute inset-0 -z-10 grid-tech opacity-[.12]" />
           <div className="pointer-events-none absolute end-0 top-0 -z-10 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
-          <div className="mx-auto max-w-7xl">
+          <div className="w-full">
             {children}
           </div>
         </main>

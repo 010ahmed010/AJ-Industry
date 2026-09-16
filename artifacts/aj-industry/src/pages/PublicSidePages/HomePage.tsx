@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Menu, MoveUpRight, Send, Sparkles, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Globe, Menu, MoveUpRight, Send, Sparkles, X, Zap } from 'lucide-react';
 import {
   useCreateInquiry,
   useCreatePrintEstimate,
@@ -75,19 +75,37 @@ function Header() {
         {navigation.map((item) => <Link key={item.href} href={item.href} className="rounded-md px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" data-testid={`link-nav-${item.en.toLowerCase().replaceAll(' ', '-')}`}>{display(language, item.ar, item.en)}</Link>)}
       </nav>
       <div className="flex items-center gap-2">
-        <button type="button" onClick={() => setLanguage((current) => current === 'ar' ? 'en' : 'ar')} className="group flex h-9 items-center gap-2 border border-border bg-secondary/50 px-3 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary" data-testid="button-language-toggle" aria-label={display(language, 'تبديل اللغة إلى الإنجليزية', 'Switch language to Arabic')}>
+        <button type="button" onClick={() => setLanguage((current) => current === 'ar' ? 'en' : 'ar')} className="group hidden h-9 items-center gap-2 border border-border bg-secondary/50 px-3 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary md:flex" data-testid="button-language-toggle" aria-label={display(language, 'تبديل اللغة إلى الإنجليزية', 'Switch language to Arabic')}>
           <span className="font-code text-[10px] text-primary">{language === 'ar' ? 'AR' : 'EN'}</span>
           <span className="hidden text-muted-foreground sm:inline">{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
-        <Link href="/#contact" className="hidden h-9 items-center gap-2 bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 sm:flex" data-testid="link-header-contact">
+        <Link href="/#contact" className="hidden h-9 items-center gap-2 bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 md:flex" data-testid="link-header-contact">
           {display(language, 'ابدأ مشروعك', 'Start a project')} <ArrowUpRight className="size-3.5" />
         </Link>
-        <button type="button" onClick={() => setOpen((value) => !value)} className="grid size-9 place-items-center border border-border text-muted-foreground md:hidden" data-testid="button-mobile-menu" aria-expanded={open}>
+        <button type="button" onClick={() => setOpen((value) => !value)} className="grid size-9 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary md:hidden" data-testid="button-mobile-menu" aria-expanded={open} aria-label={open ? display(language, 'إغلاق القائمة', 'Close menu') : display(language, 'فتح القائمة', 'Open menu')}>
           {open ? <X className="size-4" /> : <Menu className="size-4" />}
         </button>
       </div>
     </div>
-    {open && <nav className="border-t border-border bg-background px-5 py-3 md:hidden" aria-label="Mobile navigation">
+    {open && <nav className="border-t border-border bg-background px-5 py-4 shadow-xl md:hidden" aria-label="Mobile navigation">
+      {/* Mobile Language Switcher Row */}
+      <div className="mb-3 flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <Globe className="size-4 text-primary" />
+          <span>{display(language, 'اللغة', 'Language')}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setLanguage((current) => current === 'ar' ? 'en' : 'ar')}
+          className="flex h-8 items-center gap-2 border border-border bg-secondary/50 px-3 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary"
+          data-testid="button-mobile-language"
+          aria-label={display(language, 'تبديل اللغة', 'Toggle language')}
+        >
+          <span className="font-code text-[10px] text-primary">{language === 'ar' ? 'العربية' : 'English'}</span>
+          <span className="text-[10px] text-muted-foreground">({language === 'ar' ? 'AR' : 'EN'})</span>
+        </button>
+      </div>
+
       {navigation.map((item) => <Link key={item.href} href={item.href} onClick={close} className="block border-b border-border/60 py-3 text-sm text-muted-foreground last:border-0" data-testid={`link-mobile-${item.en.toLowerCase().replaceAll(' ', '-')}`}>{display(language, item.ar, item.en)}</Link>)}
       <Link href="/#contact" onClick={close} className="mt-3 flex items-center justify-center gap-2 bg-primary py-3 text-sm font-bold text-primary-foreground" data-testid="link-mobile-contact">{display(language, 'اطلب استشارة', 'Request a consultation')} <ArrowUpRight className="size-4" /></Link>
     </nav>}
