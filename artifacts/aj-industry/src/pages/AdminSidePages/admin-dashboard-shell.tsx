@@ -20,6 +20,7 @@ import {
   Menu,
   MessageSquare,
   PanelLeftClose,
+  PanelLeftOpen,
   Printer,
   RefreshCw,
   Search,
@@ -323,8 +324,10 @@ export function AdminSidebar({
     <div className="flex h-full min-h-0 flex-col">
       {/* Brand Header */}
       <div
-        className={`flex h-[78px] items-center border-b border-border/70 px-4 ${
-          collapsed ? 'justify-center' : 'justify-between'
+        className={`flex border-b border-border/70 ${
+          collapsed
+            ? 'h-[92px] flex-col items-center justify-center gap-2 px-2 py-2'
+            : 'h-[78px] items-center justify-between px-4'
         }`}
       >
         <Link
@@ -334,16 +337,27 @@ export function AdminSidebar({
         >
           <AdminBrandMark compact={collapsed} />
         </Link>
-        {!collapsed && (
-          <button
-            type="button"
-            onClick={onCollapse}
-            className="grid size-8 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
-            aria-label={adminText(language, 'طي الشريط الجانبي', 'Collapse sidebar')}
-          >
-            <PanelLeftClose className="size-4" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onCollapse}
+          className="grid size-8 shrink-0 place-items-center border border-border bg-secondary/30 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
+          aria-label={
+            collapsed
+              ? adminText(language, 'توسيع الشريط الجانبي (عرض الأسماء والأيقونات)', 'Expand sidebar (show icons & names)')
+              : adminText(language, 'طي الشريط الجانبي (أيقونات فقط)', 'Collapse sidebar (icons only)')
+          }
+          title={
+            collapsed
+              ? adminText(language, 'توسيع الشريط الجانبي (عرض الأسماء والأيقونات)', 'Expand sidebar (show icons & names)')
+              : adminText(language, 'طي الشريط الجانبي (أيقونات فقط)', 'Collapse sidebar (icons only)')
+          }
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="size-4 rtl:rotate-180" />
+          ) : (
+            <PanelLeftClose className="size-4 rtl:rotate-180" />
+          )}
+        </button>
       </div>
 
       {/* Admin User Profile */}
@@ -364,7 +378,7 @@ export function AdminSidebar({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="truncate text-sm font-semibold text-foreground">
-                  {user?.name || user?.username || adminText(language, 'المهندس المشرف', 'Lead Admin')}
+                  {adminText(language, 'المدير', 'Director')}
                 </p>
                 <span className="inline-flex items-center border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-code text-[8px] font-bold text-emerald-400">
                   ROOT
@@ -586,6 +600,27 @@ export function AdminDashboardShell({
             >
               <Menu className="size-4" />
             </button>
+            <button
+              type="button"
+              onClick={() => setCollapsed((v) => !v)}
+              className="hidden size-9 place-items-center border border-border bg-secondary/30 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary lg:grid"
+              aria-label={
+                collapsed
+                  ? adminText(language, 'توسيع الشريط الجانبي', 'Expand sidebar')
+                  : adminText(language, 'طي الشريط الجانبي', 'Collapse sidebar')
+              }
+              title={
+                collapsed
+                  ? adminText(language, 'توسيع الشريط الجانبي', 'Expand sidebar')
+                  : adminText(language, 'طي الشريط الجانبي', 'Collapse sidebar')
+              }
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="size-4 rtl:rotate-180" />
+              ) : (
+                <PanelLeftClose className="size-4 rtl:rotate-180" />
+              )}
+            </button>
             <div className="hidden items-center gap-2 font-code text-[9px] tracking-[.16em] text-muted-foreground sm:flex">
               <ShieldCheck className="size-3.5 text-emerald-400" />
               <span>AJ ADMIN / {getSectionTitle().toUpperCase()}</span>
@@ -602,21 +637,21 @@ export function AdminDashboardShell({
               <span className="font-code text-[10px]">MONGODB LIVE</span>
             </div>
 
-            {/* Language toggle */}
+            {/* Language toggle - Hidden on mobile screen since it is inside mobile sidebar */}
             <button
               type="button"
               onClick={onToggleLanguage}
-              className="flex h-8 items-center gap-1.5 border border-border bg-secondary/50 px-2.5 font-code text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+              className="hidden h-8 items-center gap-1.5 border border-border bg-secondary/50 px-2.5 font-code text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary sm:flex"
             >
               <Globe className="size-3.5" />
               <span>{language === 'ar' ? 'EN' : 'AR'}</span>
             </button>
 
-            {/* Sign out */}
+            {/* Sign out - Hidden on mobile screen since it is inside mobile sidebar */}
             <button
               type="button"
               onClick={() => void signOut({ redirectUrl: '/' })}
-              className="border border-border px-3 py-1.5 font-code text-[9px] tracking-[.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              className="hidden h-8 items-center border border-border px-3 font-code text-[9px] tracking-[.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex"
             >
               {adminText(language, 'تسجيل الخروج', 'SIGN OUT')}
             </button>

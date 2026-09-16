@@ -115,13 +115,22 @@ router.get("/admin/overview", async (req: Request, res: Response): Promise<void>
       })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 15);
 
+    // Exclude admin from client profiles count
+    const filteredProfiles = allProfiles.filter(
+      (p) =>
+        p.userId !== "admin_super_user" &&
+        p.email !== "admin@aj-industry.com" &&
+        !p.name?.includes("المهندس المسؤول") &&
+        !p.name?.includes("المدير"),
+    );
+
     res.json({
       metrics: {
         totalRequests: allRequests.length,
         activePrintJobs: printBreakdown.submitted + printBreakdown.reviewing + printBreakdown.quoted + printBreakdown.scheduled,
         pendingConsultations: consultationsBreakdown.submitted + consultationsBreakdown.reviewing,
         newInquiries: inquiriesBreakdown.new,
-        totalClients: allProfiles.length,
+        totalClients: filteredProfiles.length,
         totalQuotedValue,
       },
       printBreakdown,
@@ -413,13 +422,28 @@ router.get("/admin/clients", async (req: Request, res: Response): Promise<void> 
     const requestsColl = db.collection("clientRequests");
     const consultationsColl = db.collection("clientConsultations");
 
-    const [profiles, requests, consultations] = await Promise.all([
+    const [profiles, requests, consultations, adminUsers] = await Promise.all([
       profilesColl.find({}).sort({ createdAt: -1 }).toArray(),
       requestsColl.find({}).toArray(),
       consultationsColl.find({}).toArray(),
+      db.collection("users").find({ role: "admin" }).toArray(),
     ]);
 
-    const clientsWithStats = profiles.map((p) => {
+    const adminIds = new Set(adminUsers.map((u) => String(u._id)));
+    adminIds.add("admin_super_user");
+    const adminEmails = new Set(adminUsers.map((u) => String(u.email).toLowerCase()));
+    adminEmails.add("admin@aj-industry.com");
+
+    // Strictly filter out any admin profiles
+    const clientProfilesOnly = profiles.filter(
+      (p) =>
+        !adminIds.has(String(p.userId)) &&
+        !adminEmails.has(String(p.email).toLowerCase()) &&
+        !p.name?.includes("المهندس المسؤول") &&
+        !p.name?.includes("المدير")
+    );
+
+    const clientsWithStats = clientProfilesOnly.map((p) => {
       const userRequests = requests.filter((r) => r.userId === p.userId);
       const userConsultations = consultations.filter((c) => c.userId === p.userId);
       return {

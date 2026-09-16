@@ -24,6 +24,15 @@ export function AdminClientsPage({ language }: { language: Language }) {
     refetchInterval: 12_000,
   });
 
+  // Strictly filter out any admin profiles
+  const clientAccounts = clients.filter(
+    (c) =>
+      c.userId !== 'admin_super_user' &&
+      c.email?.toLowerCase() !== 'admin@aj-industry.com' &&
+      !c.name?.includes('المهندس المسؤول') &&
+      !c.name?.includes('المدير'),
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 border-b border-border/80 pb-6 sm:flex-row sm:items-center">
@@ -57,7 +66,7 @@ export function AdminClientsPage({ language }: { language: Language }) {
       <div className="border border-border bg-[#0b1528]">
         <div className="border-b border-border/80 px-6 py-4">
           <p className="font-code text-xs text-muted-foreground">
-            {clients.length} {adminText(language, 'عميل مسجل في قاعدة البيانات', 'registered clients')}
+            {clientAccounts.length} {adminText(language, 'عميل مسجل في قاعدة البيانات', 'registered clients')}
           </p>
         </div>
 
@@ -65,7 +74,7 @@ export function AdminClientsPage({ language }: { language: Language }) {
           <div className="p-12 text-center text-sm text-muted-foreground">
             {adminText(language, 'جارٍ تحميل بيانات العملاء…', 'Loading client accounts…')}
           </div>
-        ) : clients.length === 0 ? (
+        ) : clientAccounts.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="mx-auto size-8 text-muted-foreground/50" />
             <p className="mt-3 font-display text-base font-bold text-foreground">
@@ -81,7 +90,7 @@ export function AdminClientsPage({ language }: { language: Language }) {
           </div>
         ) : (
           <div className="divide-y divide-border/60">
-            {clients.map((c) => (
+            {clientAccounts.map((c) => (
               <div
                 key={c.userId}
                 className="flex flex-col gap-4 p-5 transition-colors hover:bg-secondary/20 sm:flex-row sm:items-center sm:justify-between"

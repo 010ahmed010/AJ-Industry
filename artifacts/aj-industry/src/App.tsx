@@ -173,24 +173,25 @@ function Header() {
         </button>
         {isLoaded && isSignedIn ? (
           <>
-            <Link
-              href="/client"
-              onClick={close}
-              className="flex h-9 items-center gap-1.5 border border-primary/50 bg-primary/10 px-3.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
-              data-testid="link-header-dashboard"
-            >
-              <LayoutDashboard className="size-3.5" />
-              {display(language, 'لوحة العميل', 'Client dashboard')}
-            </Link>
-            {user?.role === 'admin' && (
+            {user?.role === 'admin' ? (
               <Link
                 href="/admin-aj-industry"
                 onClick={close}
-                className="hidden h-9 items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-3 text-xs font-bold text-amber-400 transition-colors hover:bg-amber-500/20 sm:flex"
+                className="flex h-9 items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-400 transition-colors hover:bg-amber-500/20"
                 data-testid="link-header-admin-dashboard"
               >
                 <Shield className="size-3.5" />
                 {display(language, 'لوحة الإدارة', 'Admin Panel')}
+              </Link>
+            ) : (
+              <Link
+                href="/client"
+                onClick={close}
+                className="flex h-9 items-center gap-1.5 border border-primary/50 bg-primary/10 px-3.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                data-testid="link-header-dashboard"
+              >
+                <LayoutDashboard className="size-3.5" />
+                {display(language, 'لوحة العميل', 'Client dashboard')}
               </Link>
             )}
             <button
@@ -233,16 +234,7 @@ function Header() {
     {open && <nav className="border-t border-border bg-background px-5 py-3 md:hidden" aria-label="Mobile navigation">
       {isLoaded && isSignedIn && (
         <div className="mb-3 space-y-2 border-b border-border/60 pb-3">
-          <Link
-            href="/client"
-            onClick={close}
-            className="flex items-center justify-between rounded-md bg-primary/10 px-3 py-2 text-sm font-bold text-primary"
-            data-testid="link-mobile-dashboard"
-          >
-            <span>{display(language, 'لوحة العميل', 'Client dashboard')}</span>
-            <LayoutDashboard className="size-4" />
-          </Link>
-          {user?.role === 'admin' && (
+          {user?.role === 'admin' ? (
             <Link
               href="/admin-aj-industry"
               onClick={close}
@@ -251,6 +243,16 @@ function Header() {
             >
               <span>{display(language, 'لوحة الإدارة', 'Admin Panel')}</span>
               <Shield className="size-4" />
+            </Link>
+          ) : (
+            <Link
+              href="/client"
+              onClick={close}
+              className="flex items-center justify-between rounded-md bg-primary/10 px-3 py-2 text-sm font-bold text-primary"
+              data-testid="link-mobile-dashboard"
+            >
+              <span>{display(language, 'لوحة العميل', 'Client dashboard')}</span>
+              <LayoutDashboard className="size-4" />
             </Link>
           )}
         </div>
@@ -597,9 +599,10 @@ function AuthPage({ kind }: { kind: 'sign-in' | 'sign-up' }) {
 }
 
 function ClientPortalRoute() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, user } = useAuth();
   if (!isLoaded) return <div className="grid min-h-[100dvh] place-items-center bg-background font-code text-xs text-muted-foreground">LOADING / AUTHENTICATION</div>;
   if (!isSignedIn) return <Redirect to="/sign-in" />;
+  if (user?.role === 'admin') return <Redirect to="/admin-aj-industry" />;
   return <ClientDashboardPage />;
 }
 
@@ -647,10 +650,10 @@ function ClerkQueryClientCacheInvalidator() {
 }
 
 function ClientAccountProvisioner() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, user } = useAuth();
   useGetClientProfile({
     query: {
-      enabled: isLoaded && Boolean(isSignedIn),
+      enabled: isLoaded && Boolean(isSignedIn) && user?.role !== 'admin',
       staleTime: 60_000,
       queryKey: getGetClientProfileQueryKey(),
     },

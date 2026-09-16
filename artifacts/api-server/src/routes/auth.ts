@@ -30,7 +30,7 @@ async function ensureDefaultUsers() {
         username: "admin",
         email: "admin@aj-industry.com",
         passwordHash: hashPassword("ahmedahmed"),
-        name: "مدير النظام / AJ Admin",
+        name: "المدير",
         company: "AJ-Industry Operations",
         role: "admin",
         createdAt: now,
@@ -39,13 +39,14 @@ async function ensureDefaultUsers() {
       await users.insertOne(demoAdmin);
       console.log("[Auth] Seeded default admin with username: 'admin' and password: 'ahmedahmed'");
     } else {
-      // Ensure the admin account has username 'admin' and valid hash for 'ahmedahmed' if needed
+      // Ensure the admin account has username 'admin' and name 'المدير'
       const needsPasswordUpdate = verifyPassword("Admin@123", admin.passwordHash) || !admin.username;
       await users.updateOne(
         { _id: admin._id },
         {
           $set: {
             username: "admin",
+            name: "المدير",
             role: "admin",
             ...(needsPasswordUpdate ? { passwordHash: hashPassword("ahmedahmed") } : {}),
             updatedAt: now,
@@ -53,6 +54,16 @@ async function ensureDefaultUsers() {
         },
       );
     }
+
+    // Ensure admin is NEVER stored in clientProfiles
+    const clientProfilesColl = db.collection("clientProfiles");
+    await clientProfilesColl.deleteMany({
+      $or: [
+        { userId: "admin_super_user" },
+        { email: "admin@aj-industry.com" },
+        { name: { $regex: "المهندس المسؤول" } },
+      ],
+    });
 
     // Ensure default client exists
     const client = await users.findOne({ email: "client@aj-industry.com" });
@@ -530,7 +541,7 @@ router.post("/auth/demo-login", async (req: Request, res: Response): Promise<voi
         username: isAdmin ? "admin" : "client",
         email: targetEmail,
         passwordHash: hashPassword(isAdmin ? "ahmedahmed" : "Client@123"),
-        name: isAdmin ? "مدير النظام / AJ Admin" : "عميل AJ للتصنيع",
+        name: isAdmin ? "المدير" : "عميل AJ للتصنيع",
         company: isAdmin ? "AJ Operations" : "AJ Partner",
         role: isAdmin ? "admin" : "client",
         createdAt: now,

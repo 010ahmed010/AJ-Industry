@@ -81,7 +81,16 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<MongoUser | null>(() => {
     try {
       const cached = localStorage.getItem(USER_STORAGE_KEY);
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.role === 'admin' && (!parsed.name || parsed.name.includes('المهندس المسؤول') || parsed.name.includes('AJ Admin') || parsed.name.includes('مدير النظام'))) {
+          parsed.name = 'المدير';
+          try {
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(parsed));
+          } catch {}
+        }
+        return parsed;
+      }
     } catch {}
     return null;
   });
@@ -121,6 +130,9 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
           if (meRes.ok && mounted) {
             const data = await meRes.json();
             if (data.user) {
+              if (data.user.role === 'admin') {
+                data.user.name = 'المدير';
+              }
               setUser(data.user);
               setIsSignedIn(true);
               setToken(existingToken);
@@ -187,6 +199,9 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (!res.ok) {
         return { success: false, error: data.error || "فشل تسجيل دخول الإدارة" };
+      }
+      if (data.user) {
+        if (data.user.role === 'admin') data.user.name = 'المدير';
       }
       setToken(data.token);
       setUser(data.user);
