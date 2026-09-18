@@ -53,7 +53,12 @@ export function AdminContactPage({ language }: { language: Language }) {
   // Sync form data when remote data arrives
   useEffect(() => {
     if (contactData) {
-      setFormData(contactData);
+      setFormData({
+        ...contactData,
+        phoneRaw: contactData.phoneRaw
+          ? (contactData.phoneRaw.startsWith('+') ? contactData.phoneRaw : `+${contactData.phoneRaw.replace(/\D/g, '')}`)
+          : '',
+      });
       setLatitudeInput(String(contactData.latitude ?? 36.5868));
       setLongitudeInput(String(contactData.longitude ?? 37.0463));
       setIsDirty(false);
@@ -312,30 +317,6 @@ export function AdminContactPage({ language }: { language: Language }) {
     }));
     setIsDirty(true);
     setTouched((prev) => ({ ...prev, latitude: true, longitude: true }));
-  };
-
-  // Helper: auto-derive phoneRaw from display phone
-  const handleAutoDerivePhoneRaw = () => {
-    const digits = (formData.phone || '').replace(/\D/g, '');
-    if (digits) {
-      const formatted = '+' + digits;
-      handleChange('phoneRaw', formatted);
-      markTouched('phoneRaw');
-    }
-  };
-
-  // Helper: auto-extract pure digits for wa.me link
-  const handleAutoCleanWhatsappRaw = () => {
-    let digits = (formData.whatsapp || '').replace(/\D/g, '');
-    if (digits.startsWith('00')) digits = digits.slice(2);
-    if (digits.startsWith('0') && digits.length === 10) {
-      // Local Syrian/Gulf mobile (e.g. 0953316416 -> 963953316416)
-      digits = '963' + digits.slice(1);
-    }
-    if (digits) {
-      handleChange('whatsappRaw', digits);
-      markTouched('whatsappRaw');
-    }
   };
 
   // Helper: regenerate Google Maps URL from current lat/lng
@@ -639,6 +620,7 @@ export function AdminContactPage({ language }: { language: Language }) {
                 </div>
                 <input
                   type="text"
+                  dir="ltr"
                   inputMode="tel"
                   value={formData.phone}
                   onChange={(e) => {
@@ -673,49 +655,47 @@ export function AdminContactPage({ language }: { language: Language }) {
                   <label className="block text-xs font-semibold text-foreground">
                     {adminText(language, 'رقم الاتصال الدولي (tel: format)', 'International Dial String')}
                   </label>
-                  <div className="flex items-center gap-2">
-                    <span className="font-code text-[10px] text-muted-foreground">
-                      {adminText(language, 'أرقام فقط', 'Numbers only')}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleAutoDerivePhoneRaw}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
-                      title={adminText(language, 'توليد من رقم الهاتف المعروض أعلاه', 'Auto-format from display phone')}
-                    >
-                      <Wand2 className="size-3" />
-                      <span>{adminText(language, 'توليد تلقائي', 'Auto-derive')}</span>
-                    </button>
-                  </div>
+                  <span className="font-code text-[10px] text-muted-foreground">
+                    {adminText(language, 'أرقام فقط (رمز الدولة + الرقم)', 'Numbers only (country code + number)')}
+                  </span>
                 </div>
-                <input
-                  type="text"
-                  inputMode="tel"
-                  value={formData.phoneRaw}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/[^0-9+]/g, '').replace(/(?!^)\+/g, '');
-                    handleChange('phoneRaw', cleaned);
-                    markTouched('phoneRaw');
-                  }}
-                  onBlur={() => markTouched('phoneRaw')}
-                  placeholder="+963953316416"
-                  className={`w-full border px-3.5 py-2.5 text-sm font-code outline-none transition-colors ${
+                <div
+                  dir="ltr"
+                  className={`flex items-stretch border transition-colors ${
                     touched.phoneRaw && errors.phoneRaw
-                      ? 'border-destructive bg-destructive/5 text-foreground focus:border-destructive focus:ring-1 focus:ring-destructive/30'
-                      : 'border-input bg-background/60 focus:border-primary'
+                      ? 'border-destructive bg-destructive/5 text-foreground focus-within:border-destructive focus-within:ring-1 focus-within:ring-destructive/30'
+                      : 'border-input bg-background/60 focus-within:border-primary'
                   }`}
-                  data-testid="input-contact-phone-raw"
-                />
+                >
+                  <span className="inline-flex select-none items-center justify-center border-r border-border/70 bg-secondary/80 px-3.5 font-code text-sm font-bold text-primary">
+                    +
+                  </span>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    inputMode="numeric"
+                    value={(formData.phoneRaw || '').replace(/^\+/, '')}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      handleChange('phoneRaw', digits ? `+${digits}` : '');
+                      markTouched('phoneRaw');
+                    }}
+                    onBlur={() => markTouched('phoneRaw')}
+                    placeholder="963953316416"
+                    className="w-full bg-transparent px-3.5 py-2.5 font-code text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    data-testid="input-contact-phone-raw"
+                  />
+                </div>
                 {touched.phoneRaw && errors.phoneRaw ? (
                   <p className="mt-1.5 flex items-center gap-1.5 text-xs text-destructive font-medium">
                     <AlertCircle className="size-3.5 shrink-0" />
                     <span>{errors.phoneRaw}</span>
                   </p>
                 ) : (
-                  <div className="mt-1.5 flex items-center gap-2 font-code text-[11px] text-muted-foreground">
-                    <span className="text-emerald-500">✓ tel:{formData.phoneRaw || '+963953316416'}</span>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 font-code text-[11px] text-muted-foreground" dir={isAr ? 'rtl' : 'ltr'}>
+                    <span className="text-emerald-500" dir="ltr">✓ tel:{formData.phoneRaw || '+963953316416'}</span>
                     <span>•</span>
-                    <span>{adminText(language, 'أرقام فقط مع رمز الدولة (+ اختياري بدون أحرف)', 'Numbers only with country code (+ optional, no letters)')}</span>
+                    <span>{adminText(language, 'رمز + ثابت تلقائياً — أدخل الأرقام فقط متضمنة رمز الدولة', '+ is fixed as constant — enter digits only with country code')}</span>
                   </div>
                 )}
               </div>
@@ -751,6 +731,7 @@ export function AdminContactPage({ language }: { language: Language }) {
                 </div>
                 <input
                   type="text"
+                  dir="ltr"
                   inputMode="tel"
                   value={formData.whatsapp}
                   onChange={(e) => {
@@ -785,18 +766,13 @@ export function AdminContactPage({ language }: { language: Language }) {
                   <label className="block text-xs font-semibold text-foreground">
                     {adminText(language, 'أرقام واتساب لرابط wa.me (أرقام نقية مع الرمز)', 'WhatsApp Direct Digits (wa.me)')}
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleAutoCleanWhatsappRaw}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:underline"
-                    title={adminText(language, 'استخراج الأرقام فقط من رقم واتساب المعروض', 'Extract clean digits from WhatsApp')}
-                  >
-                    <Wand2 className="size-3" />
-                    <span>{adminText(language, 'استخراج الأرقام', 'Clean digits')}</span>
-                  </button>
+                  <span className="font-code text-[10px] text-muted-foreground">
+                    {adminText(language, 'أرقام فقط بدون +', 'Numbers only without +')}
+                  </span>
                 </div>
                 <input
                   type="text"
+                  dir="ltr"
                   inputMode="numeric"
                   value={formData.whatsappRaw}
                   onChange={(e) => {
@@ -818,7 +794,7 @@ export function AdminContactPage({ language }: { language: Language }) {
                     <span>{errors.whatsappRaw}</span>
                   </p>
                 ) : (
-                  <div className="mt-2 flex items-center gap-2 rounded bg-background/40 p-2 font-code text-xs text-emerald-400 border border-emerald-500/20">
+                  <div dir="ltr" className="mt-2 flex items-center gap-2 rounded bg-background/40 p-2 font-code text-xs text-emerald-400 border border-emerald-500/20 text-left">
                     <span className="text-muted-foreground">URL:</span>
                     <span className="truncate">https://wa.me/{formData.whatsappRaw || '963953316416'}</span>
                   </div>

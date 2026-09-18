@@ -27,7 +27,7 @@ async function startServer() {
   } else {
     const distPath = path.resolve(__dirname, "artifacts/aj-industry/dist/public");
     app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
+    app.get("*all", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
