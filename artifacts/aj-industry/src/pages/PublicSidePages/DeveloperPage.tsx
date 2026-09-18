@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export function DeveloperPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -11,7 +11,6 @@ export function DeveloperPage() {
 
   const [previewText, setPreviewText] = useState('');
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const [isAnimationFinished, setIsAnimationFinished] = useState(false);
 
   const animFrameRef = useRef<number | null>(null);
   const timeoutsRef = useRef<number[]>([]);
@@ -38,7 +37,6 @@ export function DeveloperPage() {
 
     playBtn.classList.add('hidden');
     actionButtons.classList.remove('visible');
-    setIsAnimationFinished(false);
 
     const width = 1200;
     const height = 320;
@@ -142,7 +140,6 @@ export function DeveloperPage() {
 
         if (colorProgress >= 1) {
           actionButtons.classList.add('visible');
-          setIsAnimationFinished(true);
         }
       }
 
@@ -257,19 +254,6 @@ export function DeveloperPage() {
 
   const handleMouseLeave = () => {
     setIsPreviewVisible(false);
-  };
-
-  const handleReplay = () => {
-    clearAllTimeouts();
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-    }
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-    simulateMouseInteraction();
   };
 
   return (
@@ -478,7 +462,7 @@ export function DeveloperPage() {
       `}</style>
 
       {/* Floating navigation controls to return to the application */}
-      <div className="fixed top-6 inset-x-6 z-50 flex items-center justify-between pointer-events-auto">
+      <div className="fixed top-6 left-6 z-50 pointer-events-auto">
         <Link
           href="/"
           className="group flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-xs font-medium text-neutral-300 backdrop-blur-md transition-all hover:border-white/30 hover:bg-white/10 hover:text-white"
@@ -488,20 +472,6 @@ export function DeveloperPage() {
           <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-1" />
           <span>AJ—INDUSTRY</span>
         </Link>
-
-        {isAnimationFinished && (
-          <button
-            type="button"
-            onClick={handleReplay}
-            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-3.5 py-2 text-xs font-medium text-neutral-300 backdrop-blur-md transition-all hover:border-white/30 hover:bg-white/10 hover:text-white"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-            title="Replay sequence"
-            data-testid="button-replay-sequence"
-          >
-            <RotateCcw className="size-3" />
-            <span>Replay</span>
-          </button>
-        )}
       </div>
 
       {/* Left-Side Watermark Preview (Higher Position) */}

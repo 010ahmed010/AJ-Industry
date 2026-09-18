@@ -21,7 +21,7 @@ const queryClient = new QueryClient();
 const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 function resolveClerkKey(): string {
   const envKey = (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '').trim();
-  if (envKey && !envKey.includes('clear-opossum')) return envKey;
+  if (envKey && envKey.startsWith('pk_')) return envKey;
   return '';
 }
 const clerkPubKey = resolveClerkKey();
@@ -713,13 +713,13 @@ function AuthPage({ kind }: { kind: 'sign-in' | 'sign-up' }) {
   const Component = kind === 'sign-in' ? SignIn : SignUp;
   const { language } = useLanguage();
   return (
-    <div className="min-h-[100dvh] bg-background px-4 py-10">
-      <div className="mx-auto mb-6 flex max-w-[440px] items-center justify-between">
-        <Link href="/" className="inline-flex items-center gap-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-primary" data-testid={`link-auth-home-${kind}`}>
-          <span className="grid size-9 place-items-center border border-primary/50 bg-primary/10 font-code text-xs font-bold text-primary">AJ</span>
-          <span>{display(language, 'العودة إلى الصفحة الرئيسية', 'Back to home')}</span>
-        </Link>
+    <div className="min-h-[100dvh] flex flex-col justify-center bg-background px-4 py-10">
+      <div className="mx-auto mb-6 flex w-full max-w-[440px] items-center justify-between">
         <span className="font-code text-[9px] tracking-[.18em] text-primary">AJ—INDUSTRY</span>
+        <Link href="/" className="inline-flex items-center gap-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-primary" data-testid={`link-auth-home-${kind}`}>
+          <span>{display(language, 'العودة إلى الصفحة الرئيسية', 'Back to home')}</span>
+          <span className="grid size-9 place-items-center border border-primary/50 bg-primary/10 font-code text-xs font-bold text-primary">AJ</span>
+        </Link>
       </div>
       <Component
         routing="path"
@@ -802,6 +802,9 @@ function AuthenticatedRouter() {
         <Route path="/" component={HomeRedirect} />
         <Route path="/sign-in/*?" component={() => <AuthPage kind="sign-in" />} />
         <Route path="/sign-up/*?" component={() => <AuthPage kind="sign-up" />} />
+        <Route path="/login">{() => <Redirect to="/sign-in" />}</Route>
+        <Route path="/client-login">{() => <Redirect to="/sign-in" />}</Route>
+        <Route path="/client/login">{() => <Redirect to="/sign-in" />}</Route>
         <Route path="/admin-login" component={AdminLoginPage} />
         <Route path="/admin-aj-industry/login" component={AdminLoginPage} />
         <Route path="/services/:slug">{() => <Shell><StructuredServiceDetailPage language={language} /></Shell>}</Route>

@@ -21,14 +21,10 @@ export const CLERK_PUBLISHABLE_KEY = (
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || ""
 ).trim();
 
-// A valid Clerk key starts with pk_ and is not the dummy placeholder clear-opossum key.
-// In the AI Studio preview iframe (*.run.app) or localhost without custom domains,
-// Clerk test instances reject iframe ancestors and third-party cookies, so the robust local/Mongo provider is used.
+// A valid Clerk key starts with pk_
 export const isClerkConfigured = Boolean(
   CLERK_PUBLISHABLE_KEY &&
-  CLERK_PUBLISHABLE_KEY.startsWith("pk_") &&
-  !CLERK_PUBLISHABLE_KEY.includes("clear-opossum") &&
-  (typeof window === "undefined" || (!window.location.hostname.includes("run.app") && !window.location.hostname.includes("localhost")))
+  CLERK_PUBLISHABLE_KEY.startsWith("pk_")
 );
 
 const ClerkActiveContext = createContext<boolean>(false);
@@ -500,21 +496,12 @@ export function useClerk() {
   return useMongoOnlyClerk();
 }
 
-export function SignIn({ initialTab = "signin" }: { initialTab?: "signin" | "register" | "demo" }) {
-  const isClerkActive = useContext(ClerkActiveContext);
-  if (isClerkActive && isClerkConfigured) {
-    return <RealSignIn />;
-  }
-
-  return <AuthCard defaultTab={initialTab} />;
+export function SignIn(props: any) {
+  return <RealSignIn {...props} />;
 }
 
 export function SignUp(props: any) {
-  const isClerkActive = useContext(ClerkActiveContext);
-  if (isClerkActive && isClerkConfigured) {
-    return <RealSignUp {...props} />;
-  }
-  return <AuthCard defaultTab="register" />;
+  return <RealSignUp {...props} />;
 }
 
 function AuthCard({ defaultTab = "signin" }: { defaultTab: "signin" | "register" | "demo" }) {
