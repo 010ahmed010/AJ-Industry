@@ -121,6 +121,34 @@ export async function updateContactDetails(
     }
   }
 
+  // Validate Phone (numbers only, no letters)
+  if (partial.phone !== undefined && partial.phone.trim()) {
+    if (/[a-zA-Z\u0600-\u06FF]/.test(partial.phone) || /[^\d+\s-]/.test(partial.phone)) {
+      throw new Error("Display phone number must contain only numbers, no letters");
+    }
+  }
+
+  // Validate PhoneRaw (numbers only with optional +, no letters)
+  if (partial.phoneRaw !== undefined && partial.phoneRaw.trim()) {
+    if (/[a-zA-Z\u0600-\u06FF]/.test(partial.phoneRaw) || /[^\d+]/.test(partial.phoneRaw)) {
+      throw new Error("International dial string must contain only numbers, no letters");
+    }
+  }
+
+  // Validate WhatsApp (numbers only, no letters)
+  if (partial.whatsapp !== undefined && partial.whatsapp.trim()) {
+    if (/[a-zA-Z\u0600-\u06FF]/.test(partial.whatsapp) || /[^\d+\s-]/.test(partial.whatsapp)) {
+      throw new Error("Display WhatsApp number must contain only numbers, no letters");
+    }
+  }
+
+  // Validate WhatsAppRaw (pure digits only, no letters or symbols)
+  if (partial.whatsappRaw !== undefined && partial.whatsappRaw.trim()) {
+    if (/[^0-9]/.test(partial.whatsappRaw.trim())) {
+      throw new Error("WhatsApp direct digits must contain only numbers, no letters or symbols");
+    }
+  }
+
   const lat = typeof partial.latitude === "number" && !isNaN(partial.latitude) ? partial.latitude : current.latitude;
   const lng = typeof partial.longitude === "number" && !isNaN(partial.longitude) ? partial.longitude : current.longitude;
 

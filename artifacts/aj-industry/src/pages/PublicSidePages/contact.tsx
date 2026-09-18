@@ -54,9 +54,9 @@ export default function ContactPage({ language }: { language: Language }) {
       </div>
     </section>
 
-    <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
-      <div dir="ltr" className="grid gap-7 lg:grid-cols-[1.05fr_.95fr]">
-        <div dir="ltr" className="grid gap-5">
+    <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+      <div dir={language === 'ar' ? 'rtl' : 'ltr'} className="grid gap-8 lg:grid-cols-[1.05fr_.95fr]">
+        <div className="grid gap-5 min-w-0">
           <div className="group relative overflow-hidden border border-border bg-card">
             <img
               src="/media/why-we-2.png"
@@ -88,11 +88,11 @@ export default function ContactPage({ language }: { language: Language }) {
                 <span className="relative grid size-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_35px_hsl(211_100%_61%/.65)]"><MapPin className="size-4 fill-current" /></span>
               </div>
               <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-7 sm:left-7 sm:right-7">
-                <div className="bg-[#071126]/80 p-4 backdrop-blur-sm">
-                  <p className="font-display text-sm font-bold">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</p>
-                  <p className="mt-1 font-code text-[10px] text-muted-foreground">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)}</p>
+                <div className="bg-[#071126]/80 p-3.5 sm:p-4 backdrop-blur-sm max-w-[65%]">
+                  <p className="font-display text-sm font-bold truncate">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</p>
+                  <p className="mt-1 font-code text-[10px] text-muted-foreground truncate">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)}</p>
                 </div>
-                <div className="text-right font-code text-[10px] leading-6 text-muted-foreground">
+                <div dir="ltr" className="text-right font-code text-[10px] leading-6 text-muted-foreground shrink-0">
                   <p>{latText}</p>
                   <p>{lngText}</p>
                 </div>
@@ -105,28 +105,33 @@ export default function ContactPage({ language }: { language: Language }) {
           </div>
         </div>
 
-        <div dir={language === 'ar' ? 'rtl' : 'ltr'} className="border border-border bg-card p-6 sm:p-8 lg:self-start">
+        <div className="border border-border bg-card p-5 sm:p-7 md:p-8 lg:self-start min-w-0">
           <div className="flex items-start justify-between gap-5">
             <div>
               <div className="mb-5 flex items-center gap-3 font-code text-[10px] font-medium tracking-[.2em] text-primary"><span className="h-px w-8 bg-primary" />CHANNELS / 03</div>
-              <h2 className="font-display text-3xl font-bold">{display(language, 'معلومات التواصل', 'Contact information')}</h2>
+              <h2 className="font-display text-2xl sm:text-3xl font-bold">{display(language, 'معلومات التواصل', 'Contact information')}</h2>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">{display(language, 'اختر القناة الأنسب، وسنكون جاهزين لسماع تفاصيل مشروعك.', 'Choose the channel that works best and tell us about your project.')}</p>
             </div>
             <span className="grid size-10 shrink-0 place-items-center border border-primary/40 bg-primary/10 text-primary"><MessageCircle className="size-4" /></span>
           </div>
 
-          <div className="mt-8 grid gap-3">
-            {contactMethods.map(({ icon: Icon, labelAr, labelEn, value, href, accent }) => <a key={href} href={href} target={href.startsWith('http') ? '_blank' : undefined} rel={href.startsWith('http') ? 'noreferrer' : undefined} className={`group flex items-center gap-4 border px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/60 ${accent}`} data-testid={`link-contact-${labelEn.toLowerCase().replace(' ', '-')}`}>
-              <span className="grid size-10 shrink-0 place-items-center border border-primary/30 bg-background/30 text-primary"><Icon className="size-4" /></span>
-              <span className="min-w-0 flex-1"><span className="block font-code text-[10px] tracking-[.16em] text-muted-foreground">{display(language, labelAr, labelEn)}</span><span className="mt-1 block truncate text-sm font-semibold">{value}</span></span>
-              <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            {contactMethods.map(({ icon: Icon, labelAr, labelEn, value, href, accent }) => <a key={href} href={href} target={href.startsWith('http') ? '_blank' : undefined} rel={href.startsWith('http') ? 'noreferrer' : undefined} className={`group flex items-center justify-between gap-3 border px-4 py-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/60 min-w-0 ${accent}`} data-testid={`link-contact-${labelEn.toLowerCase().replace(' ', '-')}`}>
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-background/30 text-primary"><Icon className="size-4" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-code text-[10px] tracking-[.16em] text-muted-foreground">{display(language, labelAr, labelEn)}</span>
+                  <span dir="ltr" className="mt-0.5 block truncate text-sm font-semibold text-foreground text-start">{value}</span>
+                </span>
+              </div>
+              <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary rtl:rotate-90 rtl:group-hover:-translate-x-0.5 rtl:group-hover:-translate-y-0.5" />
             </a>)}
           </div>
 
           <div className="mt-7 border-t border-border pt-6">
             <div className="flex items-start gap-4">
-              <span className="grid size-10 shrink-0 place-items-center border border-border bg-background/40 text-primary"><Clock3 className="size-4" /></span>
-              <div><p className="font-semibold">{display(language, 'ساعات الاستجابة', 'Response hours')}</p><p className="mt-1 text-sm leading-7 text-muted-foreground">{display(language, contact.workingHoursAr, contact.workingHoursEn)}</p></div>
+              <span className="grid size-9 shrink-0 place-items-center border border-border bg-background/40 text-primary"><Clock3 className="size-4" /></span>
+              <div><p className="font-semibold text-sm">{display(language, 'ساعات الاستجابة', 'Response hours')}</p><p className="mt-1 text-sm leading-7 text-muted-foreground">{display(language, contact.workingHoursAr, contact.workingHoursEn)}</p></div>
             </div>
           </div>
 

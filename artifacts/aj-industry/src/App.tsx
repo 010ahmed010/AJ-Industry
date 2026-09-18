@@ -158,14 +158,14 @@ function Header() {
           <span className="mt-1 block font-code text-[9px] tracking-[.24em] text-muted-foreground">ENGINEERING STUDIO</span>
         </span>
       </Link>
-      <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
-        {navigation.map((item) => <Link key={item.href} href={item.href} className="rounded-md px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" data-testid={`link-nav-${item.en.toLowerCase().replaceAll(' ', '-')}`}>{display(language, item.ar, item.en)}</Link>)}
+      <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
+        {navigation.map((item) => <Link key={item.href} href={item.href} className="rounded-md px-2.5 py-1.5 text-xs xl:px-4 xl:py-2 xl:text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" data-testid={`link-nav-${item.en.toLowerCase().replaceAll(' ', '-')}`}>{display(language, item.ar, item.en)}</Link>)}
       </nav>
       <div className="flex items-center gap-2">
-        {/* Language toggle - Desktop only (available in mobile drawer on mobile) */}
-        <button type="button" onClick={toggle} className="group hidden h-9 items-center gap-2 border border-border bg-secondary/50 px-3 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary md:flex" data-testid="button-language-toggle" aria-label={display(language, 'تبديل اللغة إلى الإنجليزية', 'Switch language to Arabic')}>
+        {/* Language toggle */}
+        <button type="button" onClick={toggle} className="group hidden h-9 items-center gap-1.5 border border-border bg-secondary/50 px-2.5 text-xs font-semibold transition-colors hover:border-primary/60 hover:text-primary sm:flex" data-testid="button-language-toggle" aria-label={display(language, 'تبديل اللغة إلى الإنجليزية', 'Switch language to Arabic')}>
           <span className="font-code text-[10px] text-primary">{language === 'ar' ? 'AR' : 'EN'}</span>
-          <span className="hidden text-muted-foreground sm:inline">{language === 'ar' ? 'English' : 'العربية'}</span>
+          <span className="hidden text-muted-foreground md:inline">{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
         {isLoaded && isSignedIn ? (
           <>
@@ -173,27 +173,27 @@ function Header() {
               <Link
                 href="/admin-aj-industry"
                 onClick={close}
-                className="hidden h-9 items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-400 transition-colors hover:bg-amber-500/20 md:flex"
+                className="hidden h-9 items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-2.5 text-xs font-bold text-amber-400 transition-colors hover:bg-amber-500/20 sm:flex"
                 data-testid="link-header-admin-dashboard"
               >
                 <Shield className="size-3.5" />
-                {display(language, 'لوحة الإدارة', 'Admin Panel')}
+                <span>{display(language, 'لوحة الإدارة', 'Admin Panel')}</span>
               </Link>
             ) : (
               <Link
                 href="/client"
                 onClick={close}
-                className="hidden h-9 items-center gap-1.5 border border-primary/50 bg-primary/10 px-3.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20 md:flex"
+                className="hidden h-9 items-center gap-1.5 border border-primary/50 bg-primary/10 px-2.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20 sm:flex"
                 data-testid="link-header-dashboard"
               >
                 <LayoutDashboard className="size-3.5" />
-                {display(language, 'لوحة العميل', 'Client dashboard')}
+                <span>{display(language, 'لوحة العميل', 'Client dashboard')}</span>
               </Link>
             )}
             <button
               type="button"
               onClick={() => signOut({ redirectUrl: basePath || '/' })}
-              className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary md:flex"
+              className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary xl:flex"
               data-testid="button-header-sign-out"
             >
               {display(language, 'تسجيل الخروج', 'Sign out')}
@@ -204,7 +204,7 @@ function Header() {
             <Link
               href="/sign-in"
               onClick={close}
-              className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary md:flex"
+              className="hidden h-9 items-center border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex"
               data-testid="link-header-sign-in"
             >
               {display(language, 'تسجيل الدخول', 'Sign in')}
@@ -212,22 +212,22 @@ function Header() {
             <Link
               href="/sign-up"
               onClick={close}
-              className="hidden h-9 items-center bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 md:flex"
+              className="hidden h-9 items-center bg-primary px-3 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 md:flex"
               data-testid="link-header-sign-up"
             >
               {display(language, 'إنشاء حساب', 'Create account')}
             </Link>
           </>
         ) : null}
-        <Link href="/#contact" className="hidden h-9 items-center gap-2 bg-primary px-4 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 md:flex" data-testid="link-header-contact">
+        <Link href="/#contact" className="hidden h-9 items-center gap-2 bg-primary px-3.5 text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 xl:flex" data-testid="link-header-contact">
           {display(language, 'ابدأ مشروعك', 'Start a project')} <ArrowUpRight className="size-3.5" />
         </Link>
-        <button type="button" onClick={() => setOpen((value) => !value)} className="grid size-9 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary md:hidden" data-testid="button-mobile-menu" aria-expanded={open} aria-label={open ? display(language, 'إغلاق القائمة', 'Close menu') : display(language, 'فتح القائمة', 'Open menu')}>
+        <button type="button" onClick={() => setOpen((value) => !value)} className="grid size-9 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary lg:hidden" data-testid="button-mobile-menu" aria-expanded={open} aria-label={open ? display(language, 'إغلاق القائمة', 'Close menu') : display(language, 'فتح القائمة', 'Open menu')}>
           {open ? <X className="size-4" /> : <Menu className="size-4" />}
         </button>
       </div>
     </div>
-    {open && <nav className="border-t border-border bg-background px-5 py-4 shadow-xl md:hidden" aria-label="Mobile navigation">
+    {open && <nav className="border-t border-border bg-background px-5 py-4 shadow-xl lg:hidden" aria-label="Mobile navigation">
       {/* Mobile Language Switcher Row */}
       <div className="mb-3 flex items-center justify-between border-b border-border/60 pb-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
@@ -316,7 +316,7 @@ function PageFooter() {
   const { contact } = useSiteContact();
   return <footer className="relative overflow-hidden border-t border-border bg-[#071126] py-14" data-testid="site-footer">
     <img src="/media/footer-reference.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-[.12]" />
-    <div className="relative mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
+    <div className="relative mx-auto grid max-w-7xl gap-10 px-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr] lg:gap-12 lg:px-8">
       <div>
         <div className="flex items-center gap-3">
           <span className="grid size-10 place-items-center border border-primary/50 bg-primary/10 font-code text-sm font-bold text-primary">AJ</span>
@@ -351,16 +351,16 @@ function PageFooter() {
         <p className="font-code text-[10px] tracking-[.2em] text-primary">CONTACT</p>
         <div className="mt-5 grid gap-3 text-sm text-muted-foreground font-code">
           <a href={`mailto:${contact.email}`} className="transition-colors hover:text-primary" data-testid="link-footer-email">{contact.email}</a>
-          <a href={`tel:${contact.phoneRaw}`} className="transition-colors hover:text-primary" data-testid="link-footer-phone">{contact.phone}</a>
+          <a href={`tel:${contact.phoneRaw}`} dir="ltr" className="transition-colors hover:text-primary text-start" data-testid="link-footer-phone">{contact.phone}</a>
           {contact.whatsapp && (
-            <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:underline" data-testid="link-footer-whatsapp">
+            <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" dir="ltr" className="text-xs text-emerald-400 hover:underline text-start" data-testid="link-footer-whatsapp">
               WhatsApp: {contact.whatsapp}
             </a>
           )}
           <span className="flex flex-col gap-0.5">
             <span className="text-foreground font-sans">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</span>
             <span className="text-xs text-muted-foreground font-sans">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)}</span>
-            <span className="text-[11px] text-primary">{contact.coordinatesDisplay}</span>
+            <span dir="ltr" className="text-[11px] text-primary text-start">{contact.coordinatesDisplay}</span>
           </span>
         </div>
       </div>
@@ -383,7 +383,7 @@ function PageFooter() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <div className="noise min-h-[100dvh] bg-background"><Header />{children}<PageFooter /></div>;
+  return <div className="noise min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background"><Header />{children}<PageFooter /></div>;
 }
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -391,7 +391,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 }
 
 function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
-  return <div className="max-w-2xl"><Eyebrow>{eyebrow}</Eyebrow><h2 className="font-display text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl">{title}</h2>{body && <p className="mt-5 text-base leading-8 text-muted-foreground">{body}</p>}</div>;
+  return <div className="max-w-2xl"><Eyebrow>{eyebrow}</Eyebrow><h2 className="font-display text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl break-words">{title}</h2>{body && <p className="mt-4 sm:mt-5 text-sm sm:text-base leading-7 sm:leading-8 text-muted-foreground">{body}</p>}</div>;
 }
 
 function ServiceCard({ service, index, language }: { service: ServiceSummary; index: number; language: Language }) {
@@ -415,16 +415,16 @@ function InquiryForm({ serviceSlug }: { serviceSlug?: string }) {
       onError: () => setError(true),
     });
   };
-  if (success) return <div className="border border-accent/40 bg-accent/10 p-8" data-testid="status-inquiry-success"><div className="grid size-12 place-items-center bg-accent text-accent-foreground"><Check className="size-6" /></div><h3 className="mt-6 font-display text-2xl font-bold">{display(language, 'وصلتنا رسالتك.', 'Message received.')}</h3><p className="mt-3 text-sm leading-7 text-muted-foreground" data-testid="text-inquiry-message">{success.message}</p><p className="mt-5 font-code text-xs text-accent" data-testid="text-inquiry-reference">REF / {success.reference}</p><button type="button" onClick={() => setSuccess(null)} className="mt-7 text-sm font-semibold text-primary underline underline-offset-4" data-testid="button-new-inquiry">{display(language, 'إرسال رسالة أخرى', 'Send another message')}</button></div>;
-  return <form onSubmit={submit} className="grid gap-4" data-testid="form-inquiry">
+  if (success) return <div className="border border-accent/40 bg-accent/10 p-6 sm:p-8" data-testid="status-inquiry-success"><div className="grid size-12 place-items-center bg-accent text-accent-foreground"><Check className="size-6" /></div><h3 className="mt-6 font-display text-2xl font-bold">{display(language, 'وصلتنا رسالتك.', 'Message received.')}</h3><p className="mt-3 text-sm leading-7 text-muted-foreground" data-testid="text-inquiry-message">{success.message}</p><p className="mt-5 font-code text-xs text-accent" data-testid="text-inquiry-reference">REF / {success.reference}</p><button type="button" onClick={() => setSuccess(null)} className="mt-7 text-sm font-semibold text-primary underline underline-offset-4" data-testid="button-new-inquiry">{display(language, 'إرسال رسالة أخرى', 'Send another message')}</button></div>;
+  return <form onSubmit={submit} className="grid gap-4 w-full min-w-0" data-testid="form-inquiry">
     {error && <div className="border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive" data-testid="status-inquiry-error">{display(language, 'حدث خطأ. تحقق من البيانات وحاول مجدداً.', 'Something went wrong. Check your details and try again.')}</div>}
     <div className="grid gap-4 sm:grid-cols-2">
-      <label className="grid gap-2 text-sm font-semibold"><span>{display(language, 'الاسم الكامل', 'Full name')}</span><input required minLength={2} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none transition-colors focus:border-primary" data-testid="input-inquiry-name" /></label>
-      <label className="grid gap-2 text-sm font-semibold"><span>{display(language, 'البريد الإلكتروني', 'Email')}</span><input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none transition-colors focus:border-primary" data-testid="input-inquiry-email" /></label>
+      <label className="grid gap-2 text-sm font-semibold min-w-0"><span>{display(language, 'الاسم الكامل', 'Full name')}</span><input required minLength={2} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="h-12 w-full border border-input bg-background/60 px-4 text-sm outline-none transition-colors focus:border-primary" data-testid="input-inquiry-name" /></label>
+      <label className="grid gap-2 text-sm font-semibold min-w-0"><span>{display(language, 'البريد الإلكتروني', 'Email')}</span><input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="h-12 w-full border border-input bg-background/60 px-4 text-sm outline-none transition-colors focus:border-primary" data-testid="input-inquiry-email" /></label>
     </div>
-    <label className="grid gap-2 text-sm font-semibold"><span>{display(language, 'الشركة (اختياري)', 'Company (optional)')}</span><input value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none transition-colors focus:border-primary" data-testid="input-inquiry-company" /></label>
-    <label className="grid gap-2 text-sm font-semibold"><span>{display(language, 'ما الذي تريد بناءه؟', 'What are you looking to build?')}</span><textarea required minLength={10} rows={5} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} className="resize-none border border-input bg-background/60 px-4 py-3 text-sm leading-7 outline-none transition-colors focus:border-primary" data-testid="input-inquiry-message" /></label>
-    <button type="submit" disabled={inquiry.isPending} className="mt-2 flex h-12 items-center justify-center gap-2 bg-primary px-5 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60" data-testid="button-submit-inquiry">{inquiry.isPending ? display(language, 'جاري الإرسال...', 'Sending...') : display(language, 'إرسال طلب الاستشارة', 'Send consultation request')} <Send className="size-4" /></button>
+    <label className="grid gap-2 text-sm font-semibold min-w-0"><span>{display(language, 'الشركة (اختياري)', 'Company (optional)')}</span><input value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} className="h-12 w-full border border-input bg-background/60 px-4 text-sm outline-none transition-colors focus:border-primary" data-testid="input-inquiry-company" /></label>
+    <label className="grid gap-2 text-sm font-semibold min-w-0"><span>{display(language, 'ما الذي تريد بناءه؟', 'What are you looking to build?')}</span><textarea required minLength={10} rows={5} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} className="w-full resize-none border border-input bg-background/60 px-4 py-3 text-sm leading-7 outline-none transition-colors focus:border-primary" data-testid="input-inquiry-message" /></label>
+    <button type="submit" disabled={inquiry.isPending} className="mt-2 flex h-12 w-full sm:w-auto items-center justify-center gap-2 bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60" data-testid="button-submit-inquiry">{inquiry.isPending ? display(language, 'جاري الإرسال...', 'Sending...') : display(language, 'إرسال طلب الاستشارة', 'Send consultation request')} <Send className="size-4" /></button>
   </form>;
 }
 
@@ -456,10 +456,10 @@ function Home() {
         <div dir={ar(language) ? 'rtl' : 'ltr'} className="mx-auto flex min-h-[calc(100svh-74px)] max-w-7xl items-center justify-between gap-10 px-5 pb-28 pt-20 lg:px-8">
           <div className={`max-w-3xl ${ar(language) ? 'text-right' : 'text-left'}`}>
             <div className="animate-rise flex items-center gap-3 font-code text-[10px] tracking-[.16em] text-primary"><span className="size-2 bg-primary pulse-line" /> FIELD NOTE / 05 / ENGINEERING INTELLIGENCE</div>
-            <h1 className="animate-rise delay-1 mt-6 font-display text-5xl font-bold leading-[1.04] tracking-[-.045em] text-balance sm:text-7xl lg:text-[76px]">
+            <h1 className="animate-rise delay-1 mt-6 font-display text-4xl font-bold leading-[1.08] tracking-[-.03em] break-words sm:text-6xl md:text-7xl lg:text-[76px]">
               {ar(language) ? <>نحوّل <span className="text-primary">التعقيد الصناعي</span><br />إلى قرار قابل للتنفيذ.</> : <>Turn industrial<br /><span className="text-primary">complexity</span> into motion.</>}
             </h1>
-            <p className="animate-rise delay-2 mt-6 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">{display(language, 'من ملفات التصنيع الجاهزة إلى الآلة المناسبة، نصنع مساراً واضحاً للمصانع وملاك الآلات والمشترين.', 'From manufacturing-ready files to the right machine, we make the path clear for factories, owners, and buyers.')}</p>
+            <p className="animate-rise delay-2 mt-6 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8 md:text-lg">{display(language, 'من ملفات التصنيع الجاهزة إلى الآلة المناسبة، نصنع مساراً واضحاً للمصانع وملاك الآلات والمشترين.', 'From manufacturing-ready files to the right machine, we make the path clear for factories, owners, and buyers.')}</p>
             <div className="animate-rise delay-3 mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/#contact" className="flex h-12 items-center justify-center gap-3 bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-1" data-testid="link-hero-contact">{display(language, 'ابدأ محادثة هندسية', 'Start an engineering brief')} <ArrowUpRight className="size-4" /></Link>
               <Link href="/#services" className="flex h-12 items-center justify-center gap-3 border border-border bg-background/30 px-6 text-sm font-bold transition-colors hover:border-primary hover:text-primary" data-testid="link-hero-services">{display(language, 'تصفح القدرات المعتمدة', 'Browse approved machinery')} <ArrowLeft className="size-4" /></Link>
@@ -477,8 +477,8 @@ function Home() {
           </div>
         </div>
         <div dir={ar(language) ? 'rtl' : 'ltr'} className="absolute inset-x-0 bottom-0 border-t border-border/80 bg-[#071126]/90 backdrop-blur-sm" data-testid="section-stats">
-          <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-border/80 sm:grid-cols-4 lg:px-8">
-            {(stats.length ? stats : [{ value: '06', labelAr: 'خدمات هندسية', labelEn: 'Engineering services' }, { value: '18', labelAr: 'سنة خبرة', labelEn: 'Years of experience' }, { value: '04', labelAr: 'مراحل واضحة', labelEn: 'Clear stages' }, { value: '24h', labelAr: 'زمن الرد الأولي', labelEn: 'First response' }]).map((stat, index) => <div key={index} className="flex min-h-[72px] items-center justify-between gap-3 border-b border-border/70 px-5 py-4 last:border-b-0 sm:block sm:border-b-0 sm:px-7 sm:py-5" data-testid={`stat-home-${index}`}><span className="font-code text-2xl text-primary sm:block sm:text-3xl">{stat.value}</span><span className="text-xs text-muted-foreground sm:mt-2 sm:block">{display(language, stat.labelAr, stat.labelEn)}</span></div>)}
+          <div className="mx-auto grid max-w-7xl grid-cols-2 divide-y sm:divide-y-0 sm:divide-x rtl:sm:divide-x-reverse divide-border/80 sm:grid-cols-4 lg:px-8">
+            {(stats.length ? stats : [{ value: '06', labelAr: 'خدمات هندسية', labelEn: 'Engineering services' }, { value: '18', labelAr: 'سنة خبرة', labelEn: 'Years of experience' }, { value: '04', labelAr: 'مراحل واضحة', labelEn: 'Clear stages' }, { value: '24h', labelAr: 'زمن الرد الأولي', labelEn: 'First response' }]).map((stat, index) => <div key={index} className="flex min-h-[72px] items-center justify-between gap-3 px-5 py-4 sm:block sm:px-7 sm:py-5" data-testid={`stat-home-${index}`}><span className="font-code text-2xl text-primary sm:block sm:text-3xl">{stat.value}</span><span className="text-xs text-muted-foreground sm:mt-2 sm:block">{display(language, stat.labelAr, stat.labelEn)}</span></div>)}
           </div>
         </div>
       </section>
@@ -538,34 +538,107 @@ function Home() {
         <div className="relative mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 md:flex-row md:items-center lg:px-8"><div><Eyebrow>RAPID PROTOTYPING / 04</Eyebrow><h2 className="max-w-2xl font-display text-3xl font-bold sm:text-5xl">{display(language, 'الفكرة لا تحتاج أن تنتظر.', 'Your idea does not need to wait.')}</h2><p className="mt-4 max-w-xl text-muted-foreground">{display(language, 'قدّر تكلفة نموذجك، اختر المادة المناسبة، وابدأ دورة تصنيع قصيرة اليوم.', 'Estimate your model, choose the right material, and start a short fabrication cycle today.')}</p></div><Link href="/print-3d" className="flex shrink-0 items-center gap-3 bg-primary px-6 py-4 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-1" data-testid="link-print-callout">{display(language, 'احسب تكلفة الطباعة', 'Estimate a print')} <MoveUpRight className="size-4" /></Link></div>
       </section>
 
-      <section id="contact" className="mx-auto max-w-7xl px-5 py-24 lg:px-8" data-testid="section-contact"><div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr]"><div><SectionHeading eyebrow="CONTACT / 05" title={display(language, 'لنضع المشكلة على الطاولة.', 'Put the problem on the table.')} body={display(language, 'أرسل لنا السياق. سنعود إليك بأسئلة أفضل، وخطوة تالية واضحة.', 'Send us the context. We will come back with better questions and a clear next step.')} /><div className="mt-10 grid gap-3">
-        <a href={`mailto:${contact.email}`} className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-email">
-          <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><Mail className="size-4" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">EMAIL / 01</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">{contact.email}</span></span>
-          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
-        </a>
-        <a href={`tel:${contact.phoneRaw}`} className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-phone">
-          <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><Phone className="size-4" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">PHONE / 02</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">{contact.phone}</span></span>
-          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
-        </a>
-        <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" className="group flex items-center gap-3 border border-accent/35 bg-accent/10 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent/70 hover:bg-accent/15" data-testid="button-home-contact-whatsapp">
-          <span className="grid size-9 shrink-0 place-items-center border border-accent/40 bg-accent/10 text-accent"><MessageCircle className="size-4" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">WHATSAPP / 03</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">{contact.whatsapp}</span></span>
-          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-accent" />
-        </a>
-        <a href={contact.mapsUrl} target="_blank" rel="noreferrer" className="group flex items-center justify-between border border-border/70 bg-card/60 px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5" data-testid="button-home-contact-location">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><MapPin className="size-4" /></span>
-            <div className="min-w-0 flex-1">
-              <span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">LOCATION / 04</span>
-              <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</span>
-              <span className="block truncate font-code text-[10px] text-emerald-400">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)} • {contact.coordinatesDisplay}</span>
+      <section id="contact" className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 overflow-hidden" data-testid="section-contact">
+        <div className="grid gap-8 md:gap-10 lg:grid-cols-[.85fr_1.15fr] lg:gap-12 lg:items-start">
+          <div className="min-w-0">
+            <SectionHeading
+              eyebrow="CONTACT / 05"
+              title={display(language, 'لنضع المشكلة على الطاولة.', 'Put the problem on the table.')}
+              body={display(language, 'أرسل لنا السياق. سنعود إليك بأسئلة أفضل، وخطوة تالية واضحة.', 'Send us the context. We will come back with better questions and a clear next step.')}
+            />
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <a
+                href={`mailto:${contact.email}`}
+                className="group flex items-center justify-between gap-3 border border-border bg-card px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5 min-w-0"
+                data-testid="button-home-contact-email"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary">
+                    <Mail className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">EMAIL / 01</span>
+                    <span dir="ltr" className="mt-0.5 block truncate text-sm font-semibold text-foreground text-start">
+                      {contact.email}
+                    </span>
+                  </div>
+                </div>
+                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary rtl:rotate-90 rtl:group-hover:-translate-x-0.5 rtl:group-hover:-translate-y-0.5" />
+              </a>
+
+              <a
+                href={`tel:${contact.phoneRaw}`}
+                className="group flex items-center justify-between gap-3 border border-border bg-card px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5 min-w-0"
+                data-testid="button-home-contact-phone"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary">
+                    <Phone className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">PHONE / 02</span>
+                    <span dir="ltr" className="mt-0.5 block truncate text-sm font-semibold text-foreground text-start">
+                      {contact.phone}
+                    </span>
+                  </div>
+                </div>
+                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary rtl:rotate-90 rtl:group-hover:-translate-x-0.5 rtl:group-hover:-translate-y-0.5" />
+              </a>
+
+              <a
+                href={`https://wa.me/${contact.whatsappRaw}`}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-between gap-3 border border-accent/35 bg-accent/10 px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-accent/70 hover:bg-accent/15 min-w-0"
+                data-testid="button-home-contact-whatsapp"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="grid size-9 shrink-0 place-items-center border border-accent/40 bg-accent/10 text-accent">
+                    <MessageCircle className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">WHATSAPP / 03</span>
+                    <span dir="ltr" className="mt-0.5 block truncate text-sm font-semibold text-foreground text-start">
+                      {contact.whatsapp}
+                    </span>
+                  </div>
+                </div>
+                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent rtl:rotate-90 rtl:group-hover:-translate-x-0.5 rtl:group-hover:-translate-y-0.5" />
+              </a>
+
+              <a
+                href={contact.mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-between gap-3 border border-border/70 bg-card/60 px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 min-w-0"
+                data-testid="button-home-contact-location"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary">
+                    <MapPin className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">LOCATION / 04</span>
+                    <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">
+                      {display(language, contact.locationTitleAr, contact.locationTitleEn)}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)}
+                    </span>
+                    <span dir="ltr" className="block truncate font-code text-[10px] text-emerald-400 text-start">
+                      {contact.coordinatesDisplay}
+                    </span>
+                  </div>
+                </div>
+                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary rtl:rotate-90 rtl:group-hover:-translate-x-0.5 rtl:group-hover:-translate-y-0.5" />
+              </a>
             </div>
           </div>
-          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
-        </a>
-      </div></div><div className="border border-border bg-card p-6 sm:p-8"><InquiryForm /></div></div></section>
+          <div className="border border-border bg-card p-5 sm:p-7 md:p-8 min-w-0 w-full">
+            <InquiryForm />
+          </div>
+        </div>
+      </section>
     </main>
   </Shell>;
 }

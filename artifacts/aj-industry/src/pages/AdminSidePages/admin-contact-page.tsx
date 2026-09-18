@@ -103,6 +103,12 @@ export function AdminContactPage({ language }: { language: Language }) {
     const phoneDigits = phoneVal.replace(/\D/g, '');
     if (!phoneVal) {
       errs.phone = adminText(language, 'رقم الهاتف المعروض مطلوب', 'Display phone number is required');
+    } else if (/[a-zA-Z\u0600-\u06FF]/.test(phoneVal) || /[^\d+\s-]/.test(phoneVal)) {
+      errs.phone = adminText(
+        language,
+        'رقم الهاتف يجب أن يحتوي على أرقام فقط بدون أحرف أو نصوص',
+        'Phone number must contain only numbers, no letters'
+      );
     } else if (phoneDigits.length < 7 || phoneDigits.length > 16) {
       errs.phone = adminText(
         language,
@@ -115,6 +121,12 @@ export function AdminContactPage({ language }: { language: Language }) {
     const phoneRawVal = (formData.phoneRaw || '').trim();
     if (!phoneRawVal) {
       errs.phoneRaw = adminText(language, 'رقم الاتصال الدولي (tel:) مطلوب', 'International dial string is required');
+    } else if (/[a-zA-Z\u0600-\u06FF]/.test(phoneRawVal) || /[^\d+]/.test(phoneRawVal)) {
+      errs.phoneRaw = adminText(
+        language,
+        'رقم الاتصال الدولي يجب أن يحتوي على أرقام فقط بدون أي أحرف',
+        'International dial string must contain only numbers, no letters'
+      );
     } else if (!/^\+?[1-9]\d{6,14}$/.test(phoneRawVal)) {
       errs.phoneRaw = adminText(
         language,
@@ -128,6 +140,12 @@ export function AdminContactPage({ language }: { language: Language }) {
     const waDigits = waVal.replace(/\D/g, '');
     if (!waVal) {
       errs.whatsapp = adminText(language, 'رقم واتساب المعروض مطلوب', 'Display WhatsApp number is required');
+    } else if (/[a-zA-Z\u0600-\u06FF]/.test(waVal) || /[^\d+\s-]/.test(waVal)) {
+      errs.whatsapp = adminText(
+        language,
+        'رقم واتساب يجب أن يحتوي على أرقام فقط بدون أحرف أو نصوص',
+        'WhatsApp number must contain only numbers, no letters'
+      );
     } else if (waDigits.length < 7 || waDigits.length > 16) {
       errs.whatsapp = adminText(
         language,
@@ -140,6 +158,12 @@ export function AdminContactPage({ language }: { language: Language }) {
     const waRawVal = (formData.whatsappRaw || '').trim();
     if (!waRawVal) {
       errs.whatsappRaw = adminText(language, 'أرقام واتساب المباشرة لرابط wa.me مطلوبة', 'WhatsApp direct digits are required');
+    } else if (/[^0-9]/.test(waRawVal)) {
+      errs.whatsappRaw = adminText(
+        language,
+        'أرقام واتساب المباشرة يجب أن تكون أرقاماً فقط بدون أي أحرف أو رموز',
+        'WhatsApp direct digits must contain only numbers, no letters or symbols'
+      );
     } else if (!/^[1-9]\d{7,14}$/.test(waRawVal)) {
       errs.whatsappRaw = adminText(
         language,
@@ -610,14 +634,16 @@ export function AdminContactPage({ language }: { language: Language }) {
                     {adminText(language, 'رقم الهاتف المعروض للمستخدم', 'Display Phone Number')}
                   </label>
                   <span className="font-code text-[10px] text-muted-foreground">
-                    {adminText(language, '7-16 رقماً', '7-16 digits')}
+                    {adminText(language, 'أرقام فقط (7-16 رقماً)', 'Numbers only (7-16 digits)')}
                   </span>
                 </div>
                 <input
                   type="text"
+                  inputMode="tel"
                   value={formData.phone}
                   onChange={(e) => {
-                    handleChange('phone', e.target.value);
+                    const cleaned = e.target.value.replace(/[^0-9+ ]/g, '').replace(/(?!^)\+/g, '');
+                    handleChange('phone', cleaned);
                     markTouched('phone');
                   }}
                   onBlur={() => markTouched('phone')}
@@ -636,7 +662,7 @@ export function AdminContactPage({ language }: { language: Language }) {
                   </p>
                 ) : (
                   <p className="mt-1 font-code text-[11px] text-muted-foreground">
-                    {adminText(language, 'النص الظاهر للمستخدم (مثال: 095 331 6416 أو +966 50 000 0000)', 'Human-readable format')}
+                    {adminText(language, 'أرقام فقط بدون أحرف (مثال: 095 331 6416 أو +963953316416)', 'Numbers only, no letters (e.g. 095 331 6416 or +963953316416)')}
                   </p>
                 )}
               </div>
@@ -647,21 +673,28 @@ export function AdminContactPage({ language }: { language: Language }) {
                   <label className="block text-xs font-semibold text-foreground">
                     {adminText(language, 'رقم الاتصال الدولي (tel: format)', 'International Dial String')}
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleAutoDerivePhoneRaw}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
-                    title={adminText(language, 'توليد من رقم الهاتف المعروض أعلاه', 'Auto-format from display phone')}
-                  >
-                    <Wand2 className="size-3" />
-                    <span>{adminText(language, 'توليد تلقائي', 'Auto-derive')}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="font-code text-[10px] text-muted-foreground">
+                      {adminText(language, 'أرقام فقط', 'Numbers only')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAutoDerivePhoneRaw}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                      title={adminText(language, 'توليد من رقم الهاتف المعروض أعلاه', 'Auto-format from display phone')}
+                    >
+                      <Wand2 className="size-3" />
+                      <span>{adminText(language, 'توليد تلقائي', 'Auto-derive')}</span>
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="text"
+                  inputMode="tel"
                   value={formData.phoneRaw}
                   onChange={(e) => {
-                    handleChange('phoneRaw', e.target.value.trim());
+                    const cleaned = e.target.value.replace(/[^0-9+]/g, '').replace(/(?!^)\+/g, '');
+                    handleChange('phoneRaw', cleaned);
                     markTouched('phoneRaw');
                   }}
                   onBlur={() => markTouched('phoneRaw')}
@@ -682,7 +715,7 @@ export function AdminContactPage({ language }: { language: Language }) {
                   <div className="mt-1.5 flex items-center gap-2 font-code text-[11px] text-muted-foreground">
                     <span className="text-emerald-500">✓ tel:{formData.phoneRaw || '+963953316416'}</span>
                     <span>•</span>
-                    <span>{adminText(language, 'يبدأ برمز الدولة (+ اختياري)', 'Country code + digits')}</span>
+                    <span>{adminText(language, 'أرقام فقط مع رمز الدولة (+ اختياري بدون أحرف)', 'Numbers only with country code (+ optional, no letters)')}</span>
                   </div>
                 )}
               </div>
@@ -713,14 +746,16 @@ export function AdminContactPage({ language }: { language: Language }) {
                     {adminText(language, 'رقم واتساب المعروض', 'Display WhatsApp Number')}
                   </label>
                   <span className="font-code text-[10px] text-muted-foreground">
-                    {adminText(language, '7-16 رقماً', '7-16 digits')}
+                    {adminText(language, 'أرقام فقط (7-16 رقماً)', 'Numbers only (7-16 digits)')}
                   </span>
                 </div>
                 <input
                   type="text"
+                  inputMode="tel"
                   value={formData.whatsapp}
                   onChange={(e) => {
-                    handleChange('whatsapp', e.target.value);
+                    const cleaned = e.target.value.replace(/[^0-9+ ]/g, '').replace(/(?!^)\+/g, '');
+                    handleChange('whatsapp', cleaned);
                     markTouched('whatsapp');
                   }}
                   onBlur={() => markTouched('whatsapp')}
@@ -732,10 +767,14 @@ export function AdminContactPage({ language }: { language: Language }) {
                   }`}
                   data-testid="input-contact-whatsapp"
                 />
-                {touched.whatsapp && errors.whatsapp && (
+                {touched.whatsapp && errors.whatsapp ? (
                   <p className="mt-1.5 flex items-center gap-1.5 text-xs text-destructive font-medium">
                     <AlertCircle className="size-3.5 shrink-0" />
                     <span>{errors.whatsapp}</span>
+                  </p>
+                ) : (
+                  <p className="mt-1 font-code text-[11px] text-muted-foreground">
+                    {adminText(language, 'أرقام فقط بدون أحرف (مثال: 095 331 6416 أو 963953316416)', 'Numbers only, no letters (e.g. 095 331 6416 or 963953316416)')}
                   </p>
                 )}
               </div>
@@ -758,6 +797,7 @@ export function AdminContactPage({ language }: { language: Language }) {
                 </div>
                 <input
                   type="text"
+                  inputMode="numeric"
                   value={formData.whatsappRaw}
                   onChange={(e) => {
                     handleChange('whatsappRaw', e.target.value.replace(/[^0-9]/g, ''));
