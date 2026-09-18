@@ -192,8 +192,8 @@ export function AdminInquiriesPage({ language }: { language: Language }) {
           role="dialog"
           aria-modal="true"
         >
-          <div className="relative w-full max-w-lg border border-border bg-[#0b1528] shadow-2xl">
-            <div className="flex items-start justify-between border-b border-border p-5">
+          <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col border border-border bg-[#0b1528] shadow-2xl">
+            <div className="flex shrink-0 items-start justify-between border-b border-border p-5">
               <div>
                 <span className="font-code text-[10px] tracking-[.2em] text-primary">
                   INQUIRY / {selectedInquiry.reference}
@@ -211,7 +211,7 @@ export function AdminInquiriesPage({ language }: { language: Language }) {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4 p-5">
+            <form onSubmit={handleSave} className="space-y-4 overflow-y-auto p-5">
               <div>
                 <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
                   {adminText(language, 'حالة الرسالة', 'Inquiry Status')}

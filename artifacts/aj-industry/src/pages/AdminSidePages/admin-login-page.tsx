@@ -144,26 +144,26 @@ export function AdminLoginPage() {
       </header>
 
       {/* Main Container */}
-      <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center justify-center px-4 py-12">
+      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center justify-center px-3.5 py-6 sm:px-4 sm:py-12">
         <div className="w-full max-w-md">
           {/* Top Badge */}
-          <div className="mb-4 flex items-center justify-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-code text-[11px] font-semibold text-amber-400">
-              <Shield className="size-3" />
-              منطقة إدارية مقيدة — لمالك الموقع والمسؤولين فقط
+          <div className="mb-4 flex items-center justify-center text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-code text-[10px] sm:text-[11px] font-semibold text-amber-400">
+              <Shield className="size-3 shrink-0" />
+              <span>منطقة إدارية مقيدة — لمالك الموقع والمسؤولين فقط</span>
             </span>
           </div>
 
           {/* Already Signed In as Admin Banner */}
           {isSignedIn && user?.role === "admin" && (
-            <div className="mb-6 rounded-xl border border-emerald-500/40 bg-[#0b172d] p-5 shadow-lg">
+            <div className="mb-6 rounded-xl border border-emerald-500/40 bg-[#0b172d] p-4 sm:p-5 shadow-lg">
               <div className="flex items-center gap-3">
-                <div className="grid size-10 place-items-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-emerald-500/20 text-emerald-400">
                   <UserCheck className="size-5" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-[#edf4ff]">أنت مسجل حالياً كمسؤول النظام</p>
-                  <p className="font-code text-xs text-[#9aabc4]">{user.email || user.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-[#edf4ff]">أنت مسجل حالياً كمسؤول النظام</p>
+                  <p className="truncate font-code text-xs text-[#9aabc4]">{user.email || user.name}</p>
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
@@ -187,7 +187,7 @@ export function AdminLoginPage() {
           )}
 
           {/* Login Card */}
-          <div className="rounded-2xl border border-[#2a4164] bg-[#0b172d] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+          <div className="rounded-2xl border border-[#2a4164] bg-[#0b172d] p-5 shadow-2xl backdrop-blur-xl sm:p-8">
             {/* Title */}
             <div className="text-center">
               <div className="mx-auto grid size-12 place-items-center rounded-xl border border-primary/40 bg-primary/10 text-primary">
@@ -229,6 +229,7 @@ export function AdminLoginPage() {
                   <input
                     required
                     type="text"
+                    dir="ltr"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="h-11 w-full rounded-md border border-[#2a4164] bg-[#101f37] px-3.5 pe-10 font-code text-sm text-[#edf4ff] outline-none transition-colors focus:border-primary"
@@ -248,7 +249,7 @@ export function AdminLoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-[#9aabc4] hover:text-primary"
+                    className="text-[#9aabc4] hover:text-primary text-xs"
                   >
                     {showPassword ? "إخفاء" : "إظهار"}
                   </button>
@@ -257,6 +258,7 @@ export function AdminLoginPage() {
                   <input
                     required
                     type={showPassword ? "text" : "password"}
+                    dir="ltr"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
@@ -276,21 +278,25 @@ export function AdminLoginPage() {
 
               {/* Seed Credentials Quick-Fill Badge */}
               <div className="rounded-lg border border-[#2a4164]/80 bg-[#101f37]/70 p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-[#9aabc4]">بيانات الدخول الافتراضية:</span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-3 font-code text-xs">
-                      <span>المستخدم: <strong className="text-primary font-bold">admin</strong></span>
-                      <span>•</span>
-                      <span>كلمة السر: <strong className="text-primary font-bold">ahmedahmed</strong></span>
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <span className="block text-[11px] font-medium text-[#9aabc4]">
+                      بيانات الدخول الافتراضية:
+                    </span>
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 font-code text-xs">
+                      <span className="whitespace-nowrap">
+                        المستخدم: <strong className="font-bold text-primary">admin</strong>
+                      </span>
+                      <span className="text-[#9aabc4]/40">•</span>
+                      <span className="whitespace-nowrap">
+                        كلمة السر: <strong className="font-bold text-primary">ahmedahmed</strong>
+                      </span>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={handleFillDemo}
-                    className="shrink-0 rounded bg-primary/20 px-2.5 py-1.5 font-code text-[11px] font-bold text-primary transition-colors hover:bg-primary hover:text-[#071126]"
+                    className="flex shrink-0 items-center justify-center self-stretch sm:self-auto rounded bg-primary/20 px-3 py-1.5 font-code text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-[#071126] text-center"
                   >
                     تعبئة تلقائية
                   </button>

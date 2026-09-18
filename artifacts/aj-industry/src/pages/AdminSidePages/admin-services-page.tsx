@@ -519,7 +519,7 @@ export function AdminServicesPage({ language }: { language: Language }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="flex max-h-[92vh] w-full max-w-4xl flex-col border border-border bg-[#071126] shadow-2xl">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6">
               <div>
                 <span className="font-code text-[11px] text-primary">
                   {editingSlug
@@ -550,11 +550,11 @@ export function AdminServicesPage({ language }: { language: Language }) {
             </div>
 
             {/* Modal Tabs */}
-            <div className="flex border-b border-border bg-card/40 px-6">
+            <div className="flex overflow-x-auto border-b border-border bg-card/40 px-4 sm:px-6">
               <button
                 type="button"
                 onClick={() => setActiveTab('info')}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 font-code text-xs font-semibold transition-colors ${
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-3 font-code text-xs font-semibold whitespace-nowrap transition-colors ${
                   activeTab === 'info'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -567,7 +567,7 @@ export function AdminServicesPage({ language }: { language: Language }) {
               <button
                 type="button"
                 onClick={() => setActiveTab('highlights')}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 font-code text-xs font-semibold transition-colors ${
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-3 font-code text-xs font-semibold whitespace-nowrap transition-colors ${
                   activeTab === 'highlights'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -580,7 +580,7 @@ export function AdminServicesPage({ language }: { language: Language }) {
               <button
                 type="button"
                 onClick={() => setActiveTab('gallery')}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 font-code text-xs font-semibold transition-colors ${
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-3 font-code text-xs font-semibold whitespace-nowrap transition-colors ${
                   activeTab === 'gallery'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -594,7 +594,7 @@ export function AdminServicesPage({ language }: { language: Language }) {
               <button
                 type="button"
                 onClick={() => setActiveTab('preview')}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 font-code text-xs font-semibold transition-colors ${
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-3 font-code text-xs font-semibold whitespace-nowrap transition-colors ${
                   activeTab === 'preview'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground'

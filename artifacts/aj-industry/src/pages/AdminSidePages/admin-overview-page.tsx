@@ -78,7 +78,7 @@ export function AdminOverviewPage({ language }: { language: Language }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => void refetch()}
@@ -134,7 +134,7 @@ export function AdminOverviewPage({ language }: { language: Language }) {
       </div>
 
       {/* Print Pipeline Progress Stages */}
-      <div className="border border-border bg-[#0b1528] p-6">
+      <div className="border border-border bg-[#0b1528] p-4 sm:p-6">
         <div className="flex flex-col justify-between gap-2 border-b border-border/70 pb-4 sm:flex-row sm:items-center">
           <div>
             <p className="font-code text-[10px] tracking-[.18em] text-primary">

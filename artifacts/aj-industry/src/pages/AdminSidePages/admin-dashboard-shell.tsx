@@ -336,25 +336,35 @@ export function AdminSidebar({
   };
 
   const sidebarContent = (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Brand Header */}
       <div
-        className={`flex h-[70px] border-b border-border/70 px-4 ${
-          collapsed ? 'items-center justify-center' : 'items-center justify-start'
+        className={`flex h-[64px] shrink-0 items-center justify-between border-b border-border/70 px-4 ${
+          collapsed ? 'justify-center' : ''
         }`}
       >
         <Link
           href="/admin-aj-industry"
           onClick={onMobileClose}
           aria-label={adminText(language, 'العودة لنظرة عامة الإدارة', 'Back to Admin Overview')}
+          className="min-w-0"
         >
           <AdminBrandMark compact={collapsed} />
         </Link>
+        {/* On mobile, close button in header so it never overlaps content */}
+        <button
+          type="button"
+          onClick={onMobileClose}
+          className="grid size-8 shrink-0 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary lg:hidden"
+          aria-label={adminText(language, 'إغلاق القائمة', 'Close navigation')}
+        >
+          <X className="size-4" />
+        </button>
       </div>
 
       {/* Admin User Profile */}
       <div
-        className={`border-b border-border/70 px-4 py-5 ${
+        className={`shrink-0 border-b border-border/70 px-4 py-3.5 ${
           collapsed ? 'text-center' : ''
         }`}
       >
@@ -384,13 +394,13 @@ export function AdminSidebar({
         </div>
       </div>
 
-      {/* Navigation Links */}
+      {/* Navigation Links - Scrollable on small heights */}
       <nav
-        className="min-h-0 flex-1 px-3 py-5"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3"
         aria-label={adminText(language, 'تنقل لوحة الإدارة', 'Admin navigation')}
       >
         <p
-          className={`mb-3 px-3 font-code text-[9px] tracking-[.18em] text-muted-foreground ${
+          className={`mb-2 px-3 font-code text-[9px] tracking-[.18em] text-muted-foreground ${
             collapsed ? 'text-center' : ''
           }`}
         >
@@ -405,7 +415,7 @@ export function AdminSidebar({
                 key={item.href}
                 href={item.href}
                 onClick={onMobileClose}
-                className={`group flex min-h-11 items-center gap-3 border px-3 py-2 transition-colors ${
+                className={`group flex min-h-[42px] items-center gap-3 border px-3 py-2 transition-colors ${
                   active
                     ? 'border-primary/45 bg-primary/10 text-foreground'
                     : 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary/60 hover:text-foreground'
@@ -425,7 +435,7 @@ export function AdminSidebar({
                     <span className="truncate text-sm font-medium">
                       {adminText(language, item.labelAr, item.labelEn)}
                     </span>
-                    <span className="font-code text-[9px] text-muted-foreground">
+                    <span className="font-code text-[9px] text-muted-foreground shrink-0">
                       {item.code}
                     </span>
                   </span>
@@ -436,10 +446,10 @@ export function AdminSidebar({
         </div>
       </nav>
 
-      {/* Bottom Controls */}
+      {/* Bottom Controls - Fixed at bottom of sidebar */}
       <div
-        className={`border-t border-border/70 p-4 ${
-          collapsed ? 'grid justify-center gap-3' : 'grid gap-3'
+        className={`shrink-0 border-t border-border/70 bg-[#071126] p-3 sm:p-4 ${
+          collapsed ? 'grid justify-center gap-2.5' : 'grid gap-2.5'
         }`}
       >
         {/* DB Status */}
@@ -457,7 +467,7 @@ export function AdminSidebar({
           <Link
             href="/"
             target="_blank"
-            className="text-muted-foreground transition-colors hover:text-primary"
+            className="rounded p-1 text-muted-foreground transition-colors hover:text-primary"
             title={adminText(language, 'زيارة الموقع العام', 'Open Public Site')}
           >
             <ExternalLink className="size-4" />
@@ -518,15 +528,7 @@ export function AdminSidebar({
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             aria-label={adminText(language, 'إغلاق القائمة', 'Close navigation')}
           />
-          <aside className="relative h-full w-[min(88vw,320px)] border-e border-border bg-[#071126] shadow-2xl">
-            <button
-              type="button"
-              onClick={onMobileClose}
-              className="absolute end-4 top-5 z-10 grid size-8 place-items-center border border-border text-muted-foreground"
-              aria-label={adminText(language, 'إغلاق القائمة', 'Close navigation')}
-            >
-              <X className="size-4" />
-            </button>
+          <aside className="relative flex h-[100dvh] w-[min(88vw,320px)] flex-col overflow-hidden border-e border-border bg-[#071126] shadow-2xl">
             {sidebarContent}
           </aside>
         </div>
@@ -582,7 +584,7 @@ export function AdminDashboardShell({
           collapsed ? 'lg:ps-[76px]' : 'lg:ps-[256px]'
         }`}
       >
-        <header className="sticky top-0 z-40 flex h-[70px] items-center justify-between border-b border-border/80 bg-[#071126]/90 px-5 backdrop-blur-xl lg:px-8">
+        <header className="sticky top-0 z-40 flex h-[64px] sm:h-[70px] items-center justify-between border-b border-border/80 bg-[#071126]/90 px-4 backdrop-blur-xl sm:px-8 lg:px-10">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -650,7 +652,7 @@ export function AdminDashboardShell({
           </div>
         </header>
 
-        <main className="relative w-full overflow-hidden px-5 py-8 sm:px-8 lg:px-10">
+        <main className="relative w-full overflow-hidden px-3.5 py-6 sm:px-8 sm:py-8 lg:px-10">
           <div className="pointer-events-none absolute inset-0 -z-10 grid-tech opacity-[.12]" />
           <div className="pointer-events-none absolute end-0 top-0 -z-10 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
           <div className="w-full">

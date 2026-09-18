@@ -315,9 +315,9 @@ export function AdminPrintingPage({ language }: { language: Language }) {
           role="dialog"
           aria-modal="true"
         >
-          <div className="relative w-full max-w-xl border border-border bg-[#0b1528] shadow-2xl">
+          <div className="relative flex max-h-[92vh] w-full max-w-xl flex-col border border-border bg-[#0b1528] shadow-2xl">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-border p-6">
+            <div className="flex shrink-0 items-start justify-between border-b border-border p-5 sm:p-6">
               <div>
                 <span className="font-code text-[10px] tracking-[.2em] text-primary">
                   ADMIN ACTION / {selectedOrder.reference}
@@ -339,7 +339,7 @@ export function AdminPrintingPage({ language }: { language: Language }) {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSave} className="space-y-4 p-6">
+            <form onSubmit={handleSave} className="space-y-4 overflow-y-auto p-5 sm:p-6">
               {/* Status Select */}
               <div>
                 <label className="block font-code text-xs uppercase tracking-wider text-muted-foreground">
