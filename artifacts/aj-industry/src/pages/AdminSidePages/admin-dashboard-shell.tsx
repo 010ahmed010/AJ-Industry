@@ -560,6 +560,17 @@ export function AdminDashboardShell({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   const getSectionTitle = () => {
     if (currentPath.includes('printing')) return adminText(language, 'طلبات الطباعة 3D', '3D PRINT ORDERS');
     if (currentPath.includes('consultations')) return adminText(language, 'الاستشارات الهندسية', 'CONSULTATIONS');

@@ -134,13 +134,146 @@ function StatusLight({ label }: { label: string }) {
 export function DashboardSidebar({ currentPath, collapsed, onCollapse, mobileOpen, onMobileClose }: { currentPath: string; collapsed: boolean; onCollapse: () => void; mobileOpen: boolean; onMobileClose: () => void }) {
   const { language, profile } = useClientDashboard();
   const { signOut } = useClerk();
-  const sidebarContent = <div className="flex h-full min-h-0 flex-col">
-    <div className={`flex border-b border-border/70 ${collapsed ? 'h-[70px] items-center justify-center px-2' : 'h-[70px] items-center justify-start px-4'}`}><Link href="/" onClick={onMobileClose} aria-label={clientText(language, 'العودة إلى الصفحة الرئيسية', 'Back to public home')}><BrandMark compact={collapsed} /></Link></div>
-    <div className={`border-b border-border/70 px-4 py-5 ${collapsed ? 'text-center' : ''}`}><div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}><span className="grid size-9 shrink-0 place-items-center border border-primary/40 bg-primary/10 font-display text-sm font-bold text-primary">{(profile?.name || profile?.username || 'A').slice(0, 1) || 'A'}</span>{!collapsed && <div className="min-w-0"><p className="truncate text-sm font-semibold">{profile?.name || profile?.username || 'Client'}</p><p className="mt-1 truncate font-code text-[9px] text-muted-foreground">{profile?.email || '—'}</p></div>}</div></div>
-    <nav className="min-h-0 flex-1 px-3 py-5" aria-label={clientText(language, 'تنقل لوحة العميل', 'Client dashboard navigation')}><p className={`mb-3 px-3 font-code text-[9px] tracking-[.18em] text-muted-foreground ${collapsed ? 'text-center' : ''}`}>{collapsed ? '—' : clientText(language, 'مساحة العمل', 'WORKSPACE')}</p><div className="grid gap-1">{navItems.map((item) => { const active = currentPath === item.href; const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={onMobileClose} className={`group flex min-h-11 items-center gap-3 border px-3 py-2 transition-colors ${active ? 'border-primary/45 bg-primary/10 text-foreground' : 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary/60 hover:text-foreground'} ${collapsed ? 'justify-center' : ''}`} aria-current={active ? 'page' : undefined} title={collapsed ? clientText(language, item.labelAr, item.labelEn) : undefined}><Icon className={`size-4 shrink-0 ${active ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />{!collapsed && <span className="flex min-w-0 flex-1 items-center justify-between gap-2"><span className="truncate text-sm">{clientText(language, item.labelAr, item.labelEn)}</span><span className="font-code text-[9px] text-muted-foreground">{item.code}</span></span>}</Link>; })}</div></nav>
-     <div className={`border-t border-border/70 p-4 ${collapsed ? 'grid justify-center gap-3' : 'grid gap-3'}`}><div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>{!collapsed && <StatusLight label={clientText(language, 'متصل', 'ONLINE')} />}<button type="button" onClick={onMobileClose} className="text-muted-foreground transition-colors hover:text-primary" aria-label={clientText(language, 'مركز المساعدة', 'Help center')}><LifeBuoy className="size-4" /></button></div><button type="button" onClick={() => void signOut({ redirectUrl: '/' })} className={`flex min-h-10 items-center gap-3 border border-border px-3 py-2 text-start text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/60 hover:text-destructive-foreground ${collapsed ? 'justify-center' : ''}`} aria-label={clientText(language, 'تسجيل الخروج', 'Sign out')} data-testid="button-sidebar-sign-out"><LogOut className="size-4 shrink-0" />{!collapsed && <span>{clientText(language, 'تسجيل الخروج', 'Sign out')}</span>}</button></div>
-  </div>;
-  return <><aside className={`fixed inset-y-0 start-0 z-50 hidden border-e border-border/80 bg-[#071126] transition-[width] duration-300 lg:block ${collapsed ? 'w-[76px]' : 'w-[256px]'}`}>{sidebarContent}</aside>{mobileOpen && <div className="fixed inset-0 z-[60] lg:hidden"><button type="button" onClick={onMobileClose} className="absolute inset-0 bg-background/80 backdrop-blur-sm" aria-label={clientText(language, 'إغلاق القائمة', 'Close navigation')} /><aside className="relative h-full w-[min(88vw,320px)] border-e border-border bg-[#071126] shadow-2xl"><button type="button" onClick={onMobileClose} className="absolute end-4 top-5 z-10 grid size-8 place-items-center border border-border text-muted-foreground" aria-label={clientText(language, 'إغلاق القائمة', 'Close navigation')}><X className="size-4" /></button>{sidebarContent}</aside></div>}</>;
+  const sidebarContent = (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div
+        className={`flex h-[64px] shrink-0 items-center justify-between border-b border-border/70 px-4 ${
+          collapsed ? 'justify-center' : ''
+        }`}
+      >
+        <Link
+          href="/"
+          onClick={onMobileClose}
+          aria-label={clientText(language, 'العودة إلى الصفحة الرئيسية', 'Back to public home')}
+          className="min-w-0"
+        >
+          <BrandMark compact={collapsed} />
+        </Link>
+        <button
+          type="button"
+          onClick={onMobileClose}
+          className="grid size-8 shrink-0 place-items-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary lg:hidden"
+          aria-label={clientText(language, 'إغلاق القائمة', 'Close navigation')}
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+
+      <div
+        className={`shrink-0 border-b border-border/70 px-4 py-3.5 ${
+          collapsed ? 'text-center' : ''
+        }`}
+      >
+        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+          <span className="grid size-9 shrink-0 place-items-center border border-primary/40 bg-primary/10 font-display text-sm font-bold text-primary">
+            {(profile?.name || profile?.username || 'A').slice(0, 1) || 'A'}
+          </span>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{profile?.name || profile?.username || 'Client'}</p>
+              <p className="mt-1 truncate font-code text-[9px] text-muted-foreground">{profile?.email || '—'}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <nav
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3"
+        aria-label={clientText(language, 'تنقل لوحة العميل', 'Client dashboard navigation')}
+      >
+        <p className={`mb-2 px-3 font-code text-[9px] tracking-[.18em] text-muted-foreground ${collapsed ? 'text-center' : ''}`}>
+          {collapsed ? '—' : clientText(language, 'مساحة العمل', 'WORKSPACE')}
+        </p>
+        <div className="grid gap-1">
+          {navItems.map((item) => {
+            const active = currentPath === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onMobileClose}
+                className={`group flex min-h-[42px] items-center gap-3 border px-3 py-2 transition-colors ${
+                  active
+                    ? 'border-primary/45 bg-primary/10 text-foreground'
+                    : 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary/60 hover:text-foreground'
+                } ${collapsed ? 'justify-center' : ''}`}
+                aria-current={active ? 'page' : undefined}
+                title={collapsed ? clientText(language, item.labelAr, item.labelEn) : undefined}
+              >
+                <Icon
+                  className={`size-4 shrink-0 ${
+                    active ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'
+                  }`}
+                />
+                {!collapsed && (
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                    <span className="truncate text-sm">{clientText(language, item.labelAr, item.labelEn)}</span>
+                    <span className="shrink-0 font-code text-[9px] text-muted-foreground">{item.code}</span>
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div
+        className={`shrink-0 border-t border-border/70 bg-[#071126] p-3 sm:p-4 ${
+          collapsed ? 'grid justify-center gap-2.5' : 'grid gap-2.5'
+        }`}
+      >
+        <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+          {!collapsed && <StatusLight label={clientText(language, 'متصل', 'ONLINE')} />}
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="rounded p-1 text-muted-foreground transition-colors hover:text-primary"
+            aria-label={clientText(language, 'مركز المساعدة', 'Help center')}
+          >
+            <LifeBuoy className="size-4" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => void signOut({ redirectUrl: '/' })}
+          className={`flex min-h-10 items-center gap-3 border border-border px-3 py-2 text-start text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/60 hover:text-destructive-foreground ${
+            collapsed ? 'justify-center' : ''
+          }`}
+          aria-label={clientText(language, 'تسجيل الخروج', 'Sign out')}
+          data-testid="button-sidebar-sign-out"
+        >
+          <LogOut className="size-4 shrink-0" />
+          {!collapsed && <span>{clientText(language, 'تسجيل الخروج', 'Sign out')}</span>}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <aside
+        className={`fixed inset-y-0 start-0 z-50 hidden border-e border-border/80 bg-[#071126] transition-[width] duration-300 lg:block ${
+          collapsed ? 'w-[76px]' : 'w-[256px]'
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            aria-label={clientText(language, 'إغلاق القائمة', 'Close navigation')}
+          />
+          <aside className="relative flex h-[100dvh] w-[min(88vw,320px)] flex-col overflow-hidden border-e border-border bg-[#071126] shadow-2xl">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
+  );
 }
 
 export function ClientDashboardShell({ children, currentPath }: { children: ReactNode; currentPath: string }) {
@@ -148,7 +281,26 @@ export function ClientDashboardShell({ children, currentPath }: { children: Reac
   const { signOut } = useClerk();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  useEffect(() => { const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileOpen(false); }; window.addEventListener('keydown', onKeyDown); return () => window.removeEventListener('keydown', onKeyDown); }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   return <div className="noise min-h-[100dvh] bg-background text-foreground"><DashboardSidebar currentPath={currentPath} collapsed={collapsed} onCollapse={() => setCollapsed((value) => !value)} mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} /><div className={`min-h-[100dvh] transition-all duration-300 ease-in-out ${collapsed ? 'lg:ps-[76px]' : 'lg:ps-[256px]'}`}><header className="sticky top-0 z-40 flex h-[70px] items-center justify-between border-b border-border/80 bg-background/90 px-5 backdrop-blur-xl lg:px-8"><div className="flex items-center gap-3"><button type="button" onClick={() => setMobileOpen(true)} className="grid size-9 place-items-center border border-border text-muted-foreground lg:hidden" aria-label={clientText(language, 'فتح القائمة', 'Open navigation')}><Menu className="size-4" /></button><button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-9 place-items-center border border-border bg-secondary/30 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary lg:grid" aria-label={collapsed ? clientText(language, 'توسيع الشريط الجانبي', 'Expand sidebar') : clientText(language, 'طي الشريط الجانبي', 'Collapse sidebar')} title={collapsed ? clientText(language, 'توسيع الشريط الجانبي', 'Expand sidebar') : clientText(language, 'طي الشريط الجانبي', 'Collapse sidebar')}>{collapsed ? <PanelLeftOpen className="size-4 rtl:rotate-180" /> : <PanelLeftClose className="size-4 rtl:rotate-180" />}</button><div className="hidden items-center gap-2 font-code text-[9px] tracking-[.16em] text-muted-foreground sm:flex"><Command className="size-3.5 text-primary" /> CONTROL ROOM / {currentPath === '/client' ? 'OVERVIEW' : currentPath.split('/').pop()?.toUpperCase()}</div><div className="sm:hidden"><BrandMark compact={true} /></div></div><div className="flex items-center gap-3"><StatusLight label={clientText(language, 'المنصة متصلة', 'PLATFORM ONLINE')} /><div className="hidden h-5 w-px bg-border sm:block" /><button type="button" onClick={() => void signOut({ redirectUrl: '/' })} className="hidden border border-border px-3 py-2 font-code text-[9px] tracking-[.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:block">{clientText(language, 'تسجيل الخروج', 'SIGN OUT')}</button></div></header><main className="relative w-full overflow-hidden px-5 py-8 sm:px-8 lg:px-10"><div className="pointer-events-none absolute inset-0 -z-10 grid-tech opacity-[.12]" /><div className="pointer-events-none absolute end-0 top-0 -z-10 h-72 w-72 rounded-full bg-primary/5 blur-3xl" /><div className="w-full">{children}</div></main></div></div>;
 }
 
