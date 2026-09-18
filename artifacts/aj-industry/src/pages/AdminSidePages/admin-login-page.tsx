@@ -218,60 +218,59 @@ export function AdminLoginPage() {
             )}
 
             {/* Form: Username and Password */}
-            <form onSubmit={handleAdminLogin} className="mt-6 space-y-4">
+            <form onSubmit={handleAdminLogin} className="mt-6 space-y-5">
               {/* Field 1: Username */}
               <div>
-                <label className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#edf4ff]">
+                <label className="mb-2 flex items-center justify-between text-xs font-semibold text-[#edf4ff]">
                   <span>اسم المستخدم / Username</span>
-                  <span className="font-code text-[11px] text-primary font-bold">admin</span>
+                  <span className="font-code text-[11px] font-bold text-primary">admin</span>
                 </label>
-                <div className="relative">
+                <div className="relative" dir="ltr">
                   <input
                     required
                     type="text"
-                    dir="ltr"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="h-11 w-full rounded-md border border-[#2a4164] bg-[#101f37] px-3.5 pe-10 font-code text-sm text-[#edf4ff] outline-none transition-colors focus:border-primary"
+                    className="h-12 w-full rounded-lg border border-[#2a4164] bg-[#101f37] pl-4 pr-11 font-code text-sm text-[#edf4ff] placeholder:text-[#9aabc4]/40 outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary/40"
                     placeholder="admin"
                     autoComplete="username"
                   />
-                  <div className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-[#9aabc4]">
-                    <User className="size-4" />
+                  <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9aabc4]">
+                    <User className="size-4.5" />
                   </div>
                 </div>
               </div>
 
               {/* Field 2: Password */}
               <div>
-                <div className="mb-1.5 flex items-center justify-between text-xs">
+                <div className="mb-2 flex items-center justify-between text-xs">
                   <label className="font-semibold text-[#edf4ff]">كلمة المرور / Password</label>
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-[#9aabc4] hover:text-primary text-xs"
+                    className="text-[#9aabc4] hover:text-primary transition-colors text-xs font-medium"
                   >
                     {showPassword ? "إخفاء" : "إظهار"}
                   </button>
                 </div>
-                <div className="relative">
+                <div className="relative" dir="ltr">
                   <input
                     required
                     type={showPassword ? "text" : "password"}
-                    dir="ltr"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="h-11 w-full rounded-md border border-[#2a4164] bg-[#101f37] px-3.5 pe-10 font-code text-sm text-[#edf4ff] outline-none transition-colors focus:border-primary"
+                    className="h-12 w-full rounded-lg border border-[#2a4164] bg-[#101f37] pl-4 pr-11 font-code text-sm tracking-wider text-[#edf4ff] placeholder:text-[#9aabc4]/40 outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary/40"
                     autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute end-3 top-1/2 -translate-y-1/2 text-[#9aabc4] hover:text-[#edf4ff]"
-                    aria-label="Toggle password visibility"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex size-8 items-center justify-center rounded text-[#9aabc4] transition-colors hover:bg-white/5 hover:text-primary"
+                    aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                    title={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
                   >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    {showPassword ? <EyeOff className="size-4.5" /> : <Eye className="size-4.5" />}
                   </button>
                 </div>
               </div>
