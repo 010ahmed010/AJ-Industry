@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { safeStorage } from '@/lib/storage';
 import { AdminDashboardShell, type Language } from './admin-dashboard-shell';
 import { AdminOverviewPage } from './admin-overview-page';
 import { AdminPrintingPage } from './admin-printing-page';
@@ -7,6 +8,7 @@ import { AdminConsultationsPage } from './admin-consultations-page';
 import { AdminInquiriesPage } from './admin-inquiries-page';
 import { AdminClientsPage } from './admin-clients-page';
 import { AdminServicesPage } from './admin-services-page';
+import { AdminContactPage } from './admin-contact-page';
 import { AdminSettingsPage } from './admin-settings-page';
 
 export function AdminDashboardPage() {
@@ -14,19 +16,24 @@ export function AdminDashboardPage() {
   const [language, setLanguage] = useState<Language>('ar');
 
   useEffect(() => {
-    const saved = localStorage.getItem('aj-language') as Language | null;
+    const saved = safeStorage.getItem('aj-language') as Language | null;
     if (saved === 'en' || saved === 'ar') setLanguage(saved);
   }, []);
 
   const toggleLanguage = () => {
     const next = language === 'ar' ? 'en' : 'ar';
     setLanguage(next);
-    localStorage.setItem('aj-language', next);
-    document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = next;
+    safeStorage.setItem('aj-language', next);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = next;
+    }
   };
 
   const renderSection = () => {
+    if (location.includes('/contact')) {
+      return <AdminContactPage language={language} />;
+    }
     if (location.includes('/settings')) {
       return <AdminSettingsPage language={language} />;
     }
@@ -66,5 +73,6 @@ export * from './admin-consultations-page';
 export * from './admin-inquiries-page';
 export * from './admin-services-page';
 export * from './admin-clients-page';
+export * from './admin-contact-page';
 export * from './admin-settings-page';
 export * from './admin-login-page';

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { safeStorage } from '@/lib/storage';
 import {
   KeyRound,
   Shield,
@@ -93,7 +94,7 @@ export function AdminSettingsPage({ language = 'ar' }: { language?: Language }) 
           user?.email || 'admin@aj-industry.com',
         );
       } else {
-        const storedToken = localStorage.getItem('aj_industry_token') || '';
+        const storedToken = safeStorage.getItem('aj_industry_token') || '';
         const fetchRes = await fetch("/api/auth/admin-set-password", {
           method: "POST",
           headers: {
@@ -111,10 +112,8 @@ export function AdminSettingsPage({ language = 'ar' }: { language?: Language }) 
           res = { success: false, error: data.error || (isAr ? 'فشل تحديث كلمة المرور' : 'Failed to update password') };
         } else {
           if (data.token) {
-            try {
-              localStorage.setItem('aj_industry_token', data.token);
-              if (data.user) localStorage.setItem('aj_industry_user', JSON.stringify(data.user));
-            } catch {}
+            safeStorage.setItem('aj_industry_token', data.token);
+            if (data.user) safeStorage.setItem('aj_industry_user', JSON.stringify(data.user));
           }
           res = { success: true, message: data.message };
         }

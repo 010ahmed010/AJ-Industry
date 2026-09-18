@@ -1,38 +1,44 @@
 import { ArrowUpRight, Clock3, Mail, MapPin, MessageCircle, Navigation, Phone } from 'lucide-react';
 import { Link } from 'wouter';
+import { useSiteContact } from '@/lib/site-contact';
 
 type Language = 'ar' | 'en';
 
 const display = (language: Language, arabic: string, english: string) => language === 'ar' ? arabic : english;
 
-const contactMethods = [
-  {
-    icon: MessageCircle,
-    labelAr: 'واتساب',
-    labelEn: 'WhatsApp',
-    value: '095 331 6416',
-    href: 'https://wa.me/963953316416',
-    accent: 'border-accent/35 bg-accent/10',
-  },
-  {
-    icon: Phone,
-    labelAr: 'اتصال مباشر',
-    labelEn: 'Direct line',
-    value: '095 331 6416',
-    href: 'tel:+963953316416',
-    accent: 'border-primary/35 bg-primary/10',
-  },
-  {
-    icon: Mail,
-    labelAr: 'البريد الإلكتروني',
-    labelEn: 'Email',
-    value: 'amj.tech.work@gmail.com',
-    href: 'mailto:amj.tech.work@gmail.com',
-    accent: 'border-primary/35 bg-primary/10',
-  },
-];
-
 export default function ContactPage({ language }: { language: Language }) {
+  const { contact } = useSiteContact();
+
+  const contactMethods = [
+    {
+      icon: MessageCircle,
+      labelAr: 'واتساب',
+      labelEn: 'WhatsApp',
+      value: contact.whatsapp,
+      href: `https://wa.me/${contact.whatsappRaw}`,
+      accent: 'border-accent/35 bg-accent/10',
+    },
+    {
+      icon: Phone,
+      labelAr: 'اتصال مباشر',
+      labelEn: 'Direct line',
+      value: contact.phone,
+      href: `tel:${contact.phoneRaw}`,
+      accent: 'border-primary/35 bg-primary/10',
+    },
+    {
+      icon: Mail,
+      labelAr: 'البريد الإلكتروني',
+      labelEn: 'Email',
+      value: contact.email,
+      href: `mailto:${contact.email}`,
+      accent: 'border-primary/35 bg-primary/10',
+    },
+  ];
+
+  const latText = `${Math.abs(contact.latitude).toFixed(4)}° ${contact.latitude >= 0 ? 'N' : 'S'}`;
+  const lngText = `${Math.abs(contact.longitude).toFixed(4)}° ${contact.longitude >= 0 ? 'E' : 'W'}`;
+
   return <main className="pt-[74px]">
     <section className="border-b border-border bg-[#071126] py-20">
       <div dir={language === 'ar' ? 'rtl' : 'ltr'} className="mx-auto max-w-7xl px-5 lg:px-8">
@@ -83,16 +89,16 @@ export default function ContactPage({ language }: { language: Language }) {
               </div>
               <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-7 sm:left-7 sm:right-7">
                 <div className="bg-[#071126]/80 p-4 backdrop-blur-sm">
-                  <p className="font-display text-sm font-bold">{display(language, 'حلب / سوريا', 'Aleppo / Syria')}</p>
-                  <p className="mt-1 font-code text-[10px] text-muted-foreground">AZAZ / INDUSTRIAL ZONE</p>
+                  <p className="font-display text-sm font-bold">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</p>
+                  <p className="mt-1 font-code text-[10px] text-muted-foreground">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)}</p>
                 </div>
                 <div className="text-right font-code text-[10px] leading-6 text-muted-foreground">
-                  <p>36.5868° N</p>
-                  <p>37.0463° E</p>
+                  <p>{latText}</p>
+                  <p>{lngText}</p>
                 </div>
               </div>
             </div>
-            <a href="https://www.google.com/maps/search/?api=1&query=Azaz%2C%20Aleppo%2C%20Syria" target="_blank" rel="noreferrer" className="relative flex items-center justify-between border-t border-border/70 bg-[#071126]/75 px-5 py-4 text-xs font-semibold transition-colors hover:text-primary sm:px-7" data-testid="link-contact-map">
+            <a href={contact.mapsUrl} target="_blank" rel="noreferrer" className="relative flex items-center justify-between border-t border-border/70 bg-[#071126]/75 px-5 py-4 text-xs font-semibold transition-colors hover:text-primary sm:px-7" data-testid="link-contact-map">
               <span>{display(language, 'فتح الموقع على الخريطة', 'Open location in maps')}</span>
               <Navigation className="size-4 text-primary" />
             </a>
@@ -120,7 +126,7 @@ export default function ContactPage({ language }: { language: Language }) {
           <div className="mt-7 border-t border-border pt-6">
             <div className="flex items-start gap-4">
               <span className="grid size-10 shrink-0 place-items-center border border-border bg-background/40 text-primary"><Clock3 className="size-4" /></span>
-              <div><p className="font-semibold">{display(language, 'ساعات الاستجابة', 'Response hours')}</p><p className="mt-1 text-sm leading-7 text-muted-foreground">{display(language, 'الأحد — الخميس / 09:00 — 18:00', 'Sunday — Thursday / 09:00 — 18:00')}</p></div>
+              <div><p className="font-semibold">{display(language, 'ساعات الاستجابة', 'Response hours')}</p><p className="mt-1 text-sm leading-7 text-muted-foreground">{display(language, contact.workingHoursAr, contact.workingHoursEn)}</p></div>
             </div>
           </div>
 

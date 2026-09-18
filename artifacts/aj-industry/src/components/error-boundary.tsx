@@ -36,29 +36,39 @@ function toError(value: unknown): Error {
 }
 
 function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
+  const message = error?.message || (typeof error === 'string' ? error : String(error || ''));
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
-      <div className="max-w-lg w-full text-center">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Something went wrong
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#071126] p-6 text-foreground" dir="rtl">
+      <div className="max-w-lg w-full text-center border border-border/80 bg-card/90 p-8 shadow-2xl">
+        <span className="font-code text-[10px] text-primary font-bold tracking-widest uppercase">
+          SYSTEM RECOVERY / 00
+        </span>
+        <h1 className="mt-3 font-display text-xl font-bold text-white">
+          حدث خطأ غير متوقع / Unexpected error
         </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          This part of the app hit an error. The rest of the app is still
-          running.
+        <p className="mt-2 text-sm text-muted-foreground leading-6">
+          تعذر تحميل هذا الجزء مؤقتاً. بقية أقسام الموقع وأنظمته تعمل بصورة طبيعية.
         </p>
-        {/* Dev only: messages can carry API responses and other internals. */}
-        {import.meta.env.DEV ? (
-          <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-3 text-left text-xs text-gray-800">
-            {error.message || String(error)}
+        {import.meta.env.DEV && message ? (
+          <pre className="mt-4 max-h-48 overflow-x-auto border border-red-500/30 bg-red-950/20 p-3 text-left font-code text-xs text-red-300">
+            {message}
           </pre>
         ) : null}
-        <button
-          type="button"
-          onClick={resetError}
-          className="mt-4 rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700"
-        >
-          Try again
-        </button>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={resetError}
+            className="h-10 border border-primary bg-primary px-5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+          >
+            إعادة المحاولة / Try again
+          </button>
+          <a
+            href="/"
+            className="inline-flex h-10 items-center justify-center border border-border bg-secondary/60 px-5 text-sm font-semibold text-foreground transition-colors hover:border-primary"
+          >
+            الرئيسية / Home
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -74,18 +84,18 @@ export class ErrorBoundary extends Component<
     return { error: toError(error) };
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo): void {
-    console.error(
+  componentDidCatch(error: unknown, info?: ErrorInfo): void {
+    console.warn(
       'ErrorBoundary caught an error:',
       toError(error),
-      info.componentStack,
+      info?.componentStack,
     );
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
     if (
       this.state.error !== null &&
-      prevProps.resetKey !== this.props.resetKey
+      prevProps?.resetKey !== this.props.resetKey
     ) {
       this.resetError();
     }
@@ -104,3 +114,5 @@ export class ErrorBoundary extends Component<
     return <Fallback error={error} resetError={this.resetError} />;
   }
 }
+
+export default ErrorBoundary;

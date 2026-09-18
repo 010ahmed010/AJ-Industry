@@ -24,14 +24,23 @@ export function AdminClientsPage({ language }: { language: Language }) {
     refetchInterval: 12_000,
   });
 
-  // Strictly filter out any admin profiles
-  const clientAccounts = clients.filter(
-    (c) =>
-      c.userId !== 'admin_super_user' &&
-      c.email?.toLowerCase() !== 'admin@aj-industry.com' &&
-      !c.name?.includes('المهندس المسؤول') &&
-      !c.name?.includes('المدير'),
-  );
+  // Strictly filter out any admin profiles and deduplicate clients by unique userId
+  const seenUserIds = new Set<string>();
+  const clientAccounts = clients.filter((c) => {
+    if (!c.userId || seenUserIds.has(c.userId)) {
+      return false;
+    }
+    const isAdmin =
+      c.userId === 'admin_super_user' ||
+      c.email?.toLowerCase() === 'admin@aj-industry.com' ||
+      c.name?.includes('المهندس المسؤول') ||
+      c.name?.includes('المدير');
+    if (isAdmin) {
+      return false;
+    }
+    seenUserIds.add(c.userId);
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -90,9 +99,9 @@ export function AdminClientsPage({ language }: { language: Language }) {
           </div>
         ) : (
           <div className="divide-y divide-border/60">
-            {clientAccounts.map((c) => (
+            {clientAccounts.map((c, index) => (
               <div
-                key={c.userId}
+                key={c.userId || `client-${index}`}
                 className="flex flex-col gap-4 p-5 transition-colors hover:bg-secondary/20 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="space-y-1.5">

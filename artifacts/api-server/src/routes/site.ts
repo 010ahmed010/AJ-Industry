@@ -48,4 +48,14 @@ router.get("/materials", (_req, res): void => {
   res.json(ListMaterialsResponse.parse(materials));
 });
 
+router.get("/site/contact", async (_req, res): Promise<void> => {
+  try {
+    const { getContactDetails } = await import("../lib/contact-store");
+    const contact = await getContactDetails();
+    res.json(contact);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to load contact details", details: err?.message });
+  }
+});
+
 export default router;

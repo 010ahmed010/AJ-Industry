@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClerk } from '@/lib/auth';
+import { safeStorage } from '@/lib/storage';
 import { useGetClientOverview, useGetClientProfile, useUpdateClientProfile, getGetClientOverviewQueryKey, getGetClientProfileQueryKey } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
 import { Activity, AlertTriangle, ChevronLeft, Command, DollarSign, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, MessageCircle, PanelLeftClose, PanelLeftOpen, Printer, Settings2, ShieldCheck, UserCheck, X } from 'lucide-react';
@@ -74,7 +75,7 @@ export function useClientDashboard() {
 export function ClientDashboardProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [language, setLanguageState] = useState<ClientLanguage>(() => {
-    const saved = localStorage.getItem('aj-client-language') || localStorage.getItem('aj-language');
+    const saved = safeStorage.getItem('aj-client-language') || safeStorage.getItem('aj-language');
     return saved === 'en' ? 'en' : 'ar';
   });
   const profileQuery = useGetClientProfile();
@@ -90,9 +91,11 @@ export function ClientDashboardProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    document.documentElement.dir = isArabic(language) ? 'rtl' : 'ltr';
-    document.documentElement.lang = language;
-    localStorage.setItem('aj-client-language', language);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dir = isArabic(language) ? 'rtl' : 'ltr';
+      document.documentElement.lang = language;
+    }
+    safeStorage.setItem('aj-client-language', language);
   }, [language]);
 
   return (

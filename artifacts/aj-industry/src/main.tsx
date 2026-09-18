@@ -6,9 +6,15 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import './index.css';
 
 createRoot(document.getElementById('root')!, {
-  // Keeps caught errors off reportError(), which would raise the dev overlay.
+  // Keeps caught and recoverable errors off reportError(), which would raise the dev overlay.
   onCaughtError: (error, errorInfo) => {
-    console.error(error, errorInfo.componentStack);
+    console.warn('Caught by error boundary:', error, errorInfo?.componentStack);
+  },
+  onUncaughtError: (error, errorInfo) => {
+    console.warn('Uncaught error handled:', error, errorInfo?.componentStack);
+  },
+  onRecoverableError: (error, errorInfo) => {
+    console.warn('Recoverable error handled:', error, errorInfo?.componentStack);
   },
 }).render(
   <ErrorBoundary>

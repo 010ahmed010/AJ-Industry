@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { safeStorage } from "@/lib/storage";
 import {
   Shield,
   KeyRound,
@@ -64,10 +65,8 @@ export function AdminLoginPage() {
         if (!fetchRes.ok || !data.success) {
           res = { success: false, error: data.error || "اسم المستخدم أو كلمة المرور غير صحيحة" };
         } else {
-          try {
-            localStorage.setItem("aj_industry_token", data.token);
-            localStorage.setItem("aj_industry_user", JSON.stringify(data.user));
-          } catch {}
+          safeStorage.setItem("aj_industry_token", data.token);
+          if (data.user) safeStorage.setItem("aj_industry_user", JSON.stringify(data.user));
           res = { success: true, user: data.user };
         }
       }

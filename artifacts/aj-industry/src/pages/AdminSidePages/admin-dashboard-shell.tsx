@@ -17,6 +17,7 @@ import {
   Inbox,
   Layers,
   LogOut,
+  MapPin,
   Menu,
   MessageSquare,
   PanelLeftClose,
@@ -264,10 +265,17 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Users,
   },
   {
+    href: '/admin-aj-industry/contact',
+    labelAr: 'بيانات التواصل والموقع',
+    labelEn: 'Contact & Coordinates',
+    code: '07',
+    icon: MapPin,
+  },
+  {
     href: '/admin-aj-industry/settings',
     labelAr: 'إعدادات الإدارة والأمان',
     labelEn: 'Settings & Security',
-    code: '07',
+    code: '08',
     icon: Settings,
   },
 ];

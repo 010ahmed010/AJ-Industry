@@ -1,34 +1,27 @@
 import { type FormEvent, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClerkProvider } from '@clerk/react';
-import { SignIn, SignUp, useAuth, useClerk, MockAuthProvider, isClerkConfigured } from '@/lib/auth';
-import { publishableKeyFromHost } from '@clerk/react/internal';
+import { SignIn, SignUp, useAuth, useClerk, MockAuthProvider, ClerkActiveProvider, isClerkConfigured } from '@/lib/auth';
 import { shadcn } from '@clerk/themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { safeStorage } from '@/lib/storage';
 import { getGetClientProfileQueryKey, useCreateInquiry, useCreatePrintEstimate, useGetClientProfile, useGetHomeContent, useGetService, useListMaterials, useListServices, setAuthTokenGetter } from '@workspace/api-client-react';
-import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Globe, LayoutDashboard, Lock, LogOut, Mail, Menu, MessageCircle, MoveUpRight, Phone, Send, Shield, Sparkles, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Globe, LayoutDashboard, Lock, LogOut, Mail, MapPin, Menu, MessageCircle, MoveUpRight, Phone, Send, Shield, Sparkles, X, Zap } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import type { HomeContent, Material, PrintEstimate, ServiceDetail, ServiceSummary } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
-import { ContactPage, ServiceDetailPage as StructuredServiceDetailPage } from '@/pages/PublicSidePages';
+import { ContactPage, ServiceDetailPage as StructuredServiceDetailPage, DeveloperPage } from '@/pages/PublicSidePages';
 import { ClientDashboardPage } from '@/pages/ClientSidePages';
 import { AdminDashboardPage, AdminLoginPage } from '@/pages/AdminSidePages';
+import { useSiteContact } from '@/lib/site-contact';
 
 const queryClient = new QueryClient();
 const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 function resolveClerkKey(): string {
   const envKey = (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '').trim();
-  if (envKey) return envKey;
-  try {
-    if (typeof window !== 'undefined' && window.location?.hostname) {
-      const derived = publishableKeyFromHost(window.location.hostname);
-      if (derived && derived.startsWith('pk_')) return derived;
-    }
-  } catch {
-    // Ignore fallback failure
-  }
+  if (envKey && !envKey.includes('clear-opossum')) return envKey;
   return '';
 }
 const clerkPubKey = resolveClerkKey();
@@ -38,12 +31,12 @@ function stripBase(path: string) {
 }
 
 const clerkAppearance = {
-  theme: shadcn,
+  baseTheme: shadcn,
   cssLayerName: 'clerk',
-  options: {
+  layout: {
     logoPlacement: 'inside' as const,
     logoLinkUrl: basePath || '/',
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: typeof window !== 'undefined' ? `${window.location.origin}${basePath}/logo.svg` : `${basePath}/logo.svg`,
   },
   variables: {
     colorPrimary: '#3d9bff',
@@ -93,13 +86,15 @@ const useLanguage = () => useContext(LanguageContext);
 function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>('ar');
   useEffect(() => {
-    const saved = localStorage.getItem('aj-language') as Language | null;
+    const saved = safeStorage.getItem('aj-language') as Language | null;
     if (saved === 'en' || saved === 'ar') setLanguage(saved);
   }, []);
   useEffect(() => {
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = language;
-    localStorage.setItem('aj-language', language);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = language;
+    }
+    safeStorage.setItem('aj-language', language);
   }, [language]);
   return <LanguageContext.Provider value={{ language, toggle: () => setLanguage((current) => current === 'ar' ? 'en' : 'ar') }}>{children}</LanguageContext.Provider>;
 }
@@ -318,6 +313,7 @@ function Header() {
 
 function PageFooter() {
   const { language } = useLanguage();
+  const { contact } = useSiteContact();
   return <footer className="relative overflow-hidden border-t border-border bg-[#071126] py-14" data-testid="site-footer">
     <img src="/media/footer-reference.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-[.12]" />
     <div className="relative mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
@@ -328,7 +324,15 @@ function PageFooter() {
         </div>
         <p className="mt-5 max-w-sm text-sm leading-7 text-muted-foreground">{display(language, 'نحوّل التحديات الصناعية إلى آلات أدق، أسرع، وأسهل في الصيانة.', 'We turn industrial challenges into machines that are more precise, faster, and easier to maintain.')}</p>
         <div className="mt-6 flex gap-2">
-          {['in', 'X', '◌'].map((item) => <button type="button" key={item} className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary" data-testid={`button-social-${item}`}>{item}</button>)}
+          {contact.socialLinkedin && (
+            <a href={contact.socialLinkedin} target="_blank" rel="noreferrer" className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary" data-testid="button-social-in">in</a>
+          )}
+          {contact.socialTwitter && (
+            <a href={contact.socialTwitter} target="_blank" rel="noreferrer" className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary" data-testid="button-social-x">X</a>
+          )}
+          {contact.whatsapp && (
+            <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-emerald-400 transition-colors hover:border-primary hover:text-primary" data-testid="button-social-wa">WA</a>
+          )}
         </div>
       </div>
       <div>
@@ -337,19 +341,43 @@ function PageFooter() {
           <Link href="/#services" className="transition-colors hover:text-primary" data-testid="link-footer-services">{display(language, 'الخدمات الهندسية', 'Engineering services')}</Link>
           <Link href="/print-3d" className="transition-colors hover:text-primary" data-testid="link-footer-print">{display(language, 'الطباعة ثلاثية الأبعاد', '3D printing')}</Link>
           <Link href="/materials" className="transition-colors hover:text-primary" data-testid="link-footer-materials">{display(language, 'دليل المواد', 'Material guide')}</Link>
+          <Link href="/developer" className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80" data-testid="link-footer-developer-explore">
+            <span>{display(language, 'صفحة المطور', 'Developer')}</span>
+            <ArrowUpRight className="size-3" />
+          </Link>
         </div>
       </div>
       <div>
         <p className="font-code text-[10px] tracking-[.2em] text-primary">CONTACT</p>
-        <div className="mt-5 grid gap-3 text-sm text-muted-foreground">
-          <a href="mailto:hello@aj-industry.com" className="transition-colors hover:text-primary" data-testid="link-footer-email">hello@aj-industry.com</a>
-          <a href="tel:+966500000000" className="transition-colors hover:text-primary" data-testid="link-footer-phone">+966 50 000 0000</a>
-          <span>{display(language, 'الرياض، المملكة العربية السعودية', 'Riyadh, Saudi Arabia')}</span>
+        <div className="mt-5 grid gap-3 text-sm text-muted-foreground font-code">
+          <a href={`mailto:${contact.email}`} className="transition-colors hover:text-primary" data-testid="link-footer-email">{contact.email}</a>
+          <a href={`tel:${contact.phoneRaw}`} className="transition-colors hover:text-primary" data-testid="link-footer-phone">{contact.phone}</a>
+          {contact.whatsapp && (
+            <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:underline" data-testid="link-footer-whatsapp">
+              WhatsApp: {contact.whatsapp}
+            </a>
+          )}
+          <span className="flex flex-col gap-0.5">
+            <span className="text-foreground font-sans">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</span>
+            <span className="text-xs text-muted-foreground font-sans">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)}</span>
+            <span className="text-[11px] text-primary">{contact.coordinatesDisplay}</span>
+          </span>
         </div>
       </div>
     </div>
-    <div className="relative mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-border/70 px-5 pt-5 font-code text-[10px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-8">
-      <span>© 2025 AJ—INDUSTRY / ALL SYSTEMS NOMINAL</span><span>{display(language, 'الخصوصية والشروط', 'Privacy & terms')}</span>
+    <div className="relative mx-auto mt-12 flex max-w-7xl flex-col gap-3 border-t border-border/70 px-5 pt-5 font-code text-[10px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-8">
+      <span>© 2025 AJ—INDUSTRY / ALL SYSTEMS NOMINAL</span>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/developer"
+          className="group inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-all hover:border-primary hover:bg-primary/20 hover:text-white"
+          data-testid="link-footer-developer"
+        >
+          <span>{display(language, 'المطور', 'Developer')}</span>
+          <ArrowUpRight className="size-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+        </Link>
+        <span>{display(language, 'الخصوصية والشروط', 'Privacy & terms')}</span>
+      </div>
     </div>
   </footer>;
 }
@@ -402,6 +430,7 @@ function InquiryForm({ serviceSlug }: { serviceSlug?: string }) {
 
 function Home() {
   const { language } = useLanguage();
+  const { contact } = useSiteContact();
   const home = useGetHomeContent();
   const services = useListServices();
   const content = home.data as HomeContent | undefined;
@@ -510,22 +539,32 @@ function Home() {
       </section>
 
       <section id="contact" className="mx-auto max-w-7xl px-5 py-24 lg:px-8" data-testid="section-contact"><div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr]"><div><SectionHeading eyebrow="CONTACT / 05" title={display(language, 'لنضع المشكلة على الطاولة.', 'Put the problem on the table.')} body={display(language, 'أرسل لنا السياق. سنعود إليك بأسئلة أفضل، وخطوة تالية واضحة.', 'Send us the context. We will come back with better questions and a clear next step.')} /><div className="mt-10 grid gap-3">
-        <a href="mailto:hello@aj-industry.com" className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-email">
+        <a href={`mailto:${contact.email}`} className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-email">
           <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><Mail className="size-4" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">EMAIL / 01</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">hello@aj-industry.com</span></span>
+          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">EMAIL / 01</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">{contact.email}</span></span>
           <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
         </a>
-        <a href="tel:+966500000000" className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-phone">
+        <a href={`tel:${contact.phoneRaw}`} className="group flex items-center gap-3 border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/5" data-testid="button-home-contact-phone">
           <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><Phone className="size-4" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">PHONE / 02</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">+966 50 000 0000</span></span>
+          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">PHONE / 02</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">{contact.phone}</span></span>
           <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
         </a>
-        <a href="https://wa.me/966500000000" target="_blank" rel="noreferrer" className="group flex items-center gap-3 border border-accent/35 bg-accent/10 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent/70 hover:bg-accent/15" data-testid="button-home-contact-whatsapp">
+        <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" className="group flex items-center gap-3 border border-accent/35 bg-accent/10 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent/70 hover:bg-accent/15" data-testid="button-home-contact-whatsapp">
           <span className="grid size-9 shrink-0 place-items-center border border-accent/40 bg-accent/10 text-accent"><MessageCircle className="size-4" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">WHATSAPP / 03</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">+966 50 000 0000</span></span>
+          <span className="min-w-0 flex-1"><span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">WHATSAPP / 03</span><span className="mt-1 block truncate text-sm font-semibold text-foreground">{contact.whatsapp}</span></span>
           <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-accent" />
         </a>
-        <div className="flex gap-3 pt-2 font-code text-xs text-muted-foreground"><span className="text-primary">04</span><span>{display(language, 'الرياض / المملكة العربية السعودية', 'Riyadh / Saudi Arabia')}</span></div>
+        <a href={contact.mapsUrl} target="_blank" rel="noreferrer" className="group flex items-center justify-between border border-border/70 bg-card/60 px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5" data-testid="button-home-contact-location">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <span className="grid size-9 shrink-0 place-items-center border border-primary/30 bg-primary/10 text-primary"><MapPin className="size-4" /></span>
+            <div className="min-w-0 flex-1">
+              <span className="block font-code text-[9px] tracking-[.16em] text-muted-foreground">LOCATION / 04</span>
+              <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</span>
+              <span className="block truncate font-code text-[10px] text-emerald-400">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)} • {contact.coordinatesDisplay}</span>
+            </div>
+          </div>
+          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-primary" />
+        </a>
       </div></div><div className="border border-border bg-card p-6 sm:p-8"><InquiryForm /></div></div></section>
     </main>
   </Shell>;
@@ -696,6 +735,8 @@ function AuthenticatedRouter() {
         <Route path="/print-3d" component={PrintEstimator} />
         <Route path="/materials" component={MaterialsPage} />
         <Route path="/contact">{() => <Shell><ContactPage language={language} /></Shell>}</Route>
+        <Route path="/developer" component={DeveloperPage} />
+        <Route path="/dev" component={DeveloperPage} />
         <Route path="/client" component={ClientPortalRoute} />
         <Route path="/client/printing" component={ClientPortalRoute} />
         <Route path="/client/consultations" component={ClientPortalRoute} />
@@ -707,6 +748,7 @@ function AuthenticatedRouter() {
         <Route path="/admin-aj-industry/consultations" component={AdminPortalRoute} />
         <Route path="/admin-aj-industry/inquiries" component={AdminPortalRoute} />
         <Route path="/admin-aj-industry/clients" component={AdminPortalRoute} />
+        <Route path="/admin-aj-industry/contact" component={AdminPortalRoute} />
         <Route path="/admin-aj-industry/settings" component={AdminPortalRoute} />
         {/* Alias /admin routes */}
         <Route path="/admin" component={AdminPortalRoute} />
@@ -715,6 +757,7 @@ function AuthenticatedRouter() {
         <Route path="/admin/consultations" component={AdminPortalRoute} />
         <Route path="/admin/inquiries" component={AdminPortalRoute} />
         <Route path="/admin/clients" component={AdminPortalRoute} />
+        <Route path="/admin/contact" component={AdminPortalRoute} />
         <Route path="/admin/settings" component={AdminPortalRoute} />
         <Route component={NotFound} />
       </Switch>
@@ -727,23 +770,35 @@ function ClerkProviderWithRoutes() {
 
   if (isClerkConfigured && clerkPubKey) {
     return (
-      <ClerkProvider
-        publishableKey={clerkPubKey}
-        proxyUrl={clerkProxyUrl}
-        appearance={clerkAppearance}
-        signInUrl={`${basePath}/sign-in`}
-        signUpUrl={`${basePath}/sign-up`}
-        localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your client workspace' } }, signUp: { start: { title: 'Create your client account', subtitle: 'Keep your AJ project requests in one place' } } }}
-        routerPush={(to) => setLocation(stripBase(to))}
-        routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+      <ErrorBoundary
+        FallbackComponent={() => (
+          <MockAuthProvider>
+            <ClerkAuthTokenBridge />
+            <ClientAccountProvisioner />
+            <AuthenticatedRouter />
+          </MockAuthProvider>
+        )}
       >
-        <MockAuthProvider>
-          <ClerkAuthTokenBridge />
-          <ClerkQueryClientCacheInvalidator />
-          <ClientAccountProvisioner />
-          <AuthenticatedRouter />
-        </MockAuthProvider>
-      </ClerkProvider>
+        <ClerkProvider
+          publishableKey={clerkPubKey}
+          proxyUrl={clerkProxyUrl}
+          appearance={clerkAppearance}
+          signInUrl={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+          localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your client workspace' } }, signUp: { start: { title: 'Create your client account', subtitle: 'Keep your AJ project requests in one place' } } }}
+          routerPush={(to) => setLocation(stripBase(to))}
+          routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+        >
+          <ClerkActiveProvider>
+            <MockAuthProvider>
+              <ClerkAuthTokenBridge />
+              <ClerkQueryClientCacheInvalidator />
+              <ClientAccountProvisioner />
+              <AuthenticatedRouter />
+            </MockAuthProvider>
+          </ClerkActiveProvider>
+        </ClerkProvider>
+      </ErrorBoundary>
     );
   }
 

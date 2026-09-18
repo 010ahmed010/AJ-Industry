@@ -1,6 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ArrowUpRight, Box, Check, CircleAlert, Gauge, Globe, Menu, MoveUpRight, Send, Sparkles, X, Zap } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Box,
+  Check,
+  CircleAlert,
+  Compass,
+  Gauge,
+  Globe,
+  Mail,
+  MapPin,
+  Menu,
+  MessageCircle,
+  MoveUpRight,
+  Phone,
+  Send,
+  Sparkles,
+  X,
+  Zap,
+} from 'lucide-react';
+import { useSiteContact } from '@/lib/site-contact';
 import {
   useCreateInquiry,
   useCreatePrintEstimate,
@@ -114,6 +134,7 @@ function Header() {
 
 function PageFooter() {
   const language: Language = 'ar';
+  const { contact } = useSiteContact();
   return <footer className="relative overflow-hidden border-t border-border bg-[#071126] py-14" data-testid="site-footer">
     <img src="/media/footer-reference.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-[.12]" />
     <div className="relative mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
@@ -124,7 +145,15 @@ function PageFooter() {
         </div>
         <p className="mt-5 max-w-sm text-sm leading-7 text-muted-foreground">{display(language, 'نحوّل التحديات الصناعية إلى آلات أدق، أسرع، وأسهل في الصيانة.', 'We turn industrial challenges into machines that are more precise, faster, and easier to maintain.')}</p>
         <div className="mt-6 flex gap-2">
-          {['in', 'X', '◌'].map((item) => <button type="button" key={item} className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary" data-testid={`button-social-${item}`}>{item}</button>)}
+          {contact.socialLinkedin && (
+            <a href={contact.socialLinkedin} target="_blank" rel="noreferrer" className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary" data-testid="button-social-in">in</a>
+          )}
+          {contact.socialTwitter && (
+            <a href={contact.socialTwitter} target="_blank" rel="noreferrer" className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary" data-testid="button-social-x">X</a>
+          )}
+          {contact.whatsapp && (
+            <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" className="grid size-8 place-items-center border border-border bg-secondary/70 font-code text-xs text-emerald-400 transition-colors hover:border-primary hover:text-primary" data-testid="button-social-wa">WA</a>
+          )}
         </div>
       </div>
       <div>
@@ -133,19 +162,43 @@ function PageFooter() {
           <Link href="/#services" className="transition-colors hover:text-primary" data-testid="link-footer-services">{display(language, 'الخدمات الهندسية', 'Engineering services')}</Link>
           <Link href="/print-3d" className="transition-colors hover:text-primary" data-testid="link-footer-print">{display(language, 'الطباعة ثلاثية الأبعاد', '3D printing')}</Link>
           <Link href="/materials" className="transition-colors hover:text-primary" data-testid="link-footer-materials">{display(language, 'دليل المواد', 'Material guide')}</Link>
+          <Link href="/developer" className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80" data-testid="link-footer-developer-explore">
+            <span>{display(language, 'صفحة المطور', 'Developer')}</span>
+            <ArrowUpRight className="size-3" />
+          </Link>
         </div>
       </div>
       <div>
         <p className="font-code text-[10px] tracking-[.2em] text-primary">CONTACT</p>
-        <div className="mt-5 grid gap-3 text-sm text-muted-foreground">
-          <a href="mailto:hello@aj-industry.com" className="transition-colors hover:text-primary" data-testid="link-footer-email">hello@aj-industry.com</a>
-          <a href="tel:+966500000000" className="transition-colors hover:text-primary" data-testid="link-footer-phone">+966 50 000 0000</a>
-          <span>{display(language, 'الرياض، المملكة العربية السعودية', 'Riyadh, Saudi Arabia')}</span>
+        <div className="mt-5 grid gap-3 text-sm text-muted-foreground font-code">
+          <a href={`mailto:${contact.email}`} className="transition-colors hover:text-primary" data-testid="link-footer-email">{contact.email}</a>
+          <a href={`tel:${contact.phoneRaw}`} className="transition-colors hover:text-primary" data-testid="link-footer-phone">{contact.phone}</a>
+          {contact.whatsapp && (
+            <a href={`https://wa.me/${contact.whatsappRaw}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:underline" data-testid="link-footer-whatsapp">
+              WhatsApp: {contact.whatsapp}
+            </a>
+          )}
+          <span className="flex flex-col gap-0.5">
+            <span className="text-foreground font-sans">{display(language, contact.locationTitleAr, contact.locationTitleEn)}</span>
+            <span className="text-xs text-muted-foreground font-sans">{display(language, contact.locationSubtitleAr, contact.locationSubtitleEn)}</span>
+            <span className="text-[11px] text-primary">{contact.coordinatesDisplay}</span>
+          </span>
         </div>
       </div>
     </div>
-    <div className="relative mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-border/70 px-5 pt-5 font-code text-[10px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-8">
-      <span>© 2025 AJ—INDUSTRY / ALL SYSTEMS NOMINAL</span><span>{display(language, 'الخصوصية والشروط', 'Privacy & terms')}</span>
+    <div className="relative mx-auto mt-12 flex max-w-7xl flex-col gap-3 border-t border-border/70 px-5 pt-5 font-code text-[10px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-8">
+      <span>© 2025 AJ—INDUSTRY / ALL SYSTEMS NOMINAL</span>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/developer"
+          className="group inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-all hover:border-primary hover:bg-primary/20 hover:text-white"
+          data-testid="link-footer-developer"
+        >
+          <span>{display(language, 'المطور', 'Developer')}</span>
+          <ArrowUpRight className="size-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+        </Link>
+        <span>{display(language, 'الخصوصية والشروط', 'Privacy & terms')}</span>
+      </div>
     </div>
   </footer>;
 }
@@ -202,6 +255,7 @@ function InquiryForm({ serviceSlug }: { serviceSlug?: string }) {
 export function HomePage({ language = 'ar' }: { language?: Language }) {
   const home = useGetHomeContent();
   const services = useListServices();
+  const { contact } = useSiteContact();
   const content = home.data as HomeContent | undefined;
   const serviceList = services.data as ServiceSummary[] | undefined;
   const stats = content?.stats ?? [];
@@ -320,7 +374,67 @@ export function HomePage({ language = 'ar' }: { language?: Language }) {
         <div className="mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-[.9fr_1.1fr] lg:px-8">
           <div>
             <SectionHeading eyebrow="CONTACT / 04" title={display(language, 'تحدث إلى مهندس المشروع.', 'Speak with the project engineer.')} body={display(language, 'اكتب ما تحتاجه، وسنرد بمراجعة أولية مناسبة لمرحلة المشروع أو التخصص المطلوب.', 'Tell us what you need and we will return with a suitable initial review for your project stage or required specialty.')} />
-            <div className="mt-10 grid gap-4 rounded-2xl border border-border bg-background/60 p-5 text-sm text-muted-foreground">
+            
+            {/* Quick Contact & Coordinates Badges */}
+            <div className="mt-8 grid gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <a
+                  href={`https://wa.me/${contact.whatsappRaw}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20"
+                  data-testid="link-home-contact-whatsapp"
+                >
+                  <MessageCircle className="size-4 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">{display(language, 'واتساب مباشر', 'WhatsApp')}</span>
+                    <span className="truncate font-code">{contact.whatsapp}</span>
+                  </div>
+                </a>
+
+                <a
+                  href={`tel:${contact.phoneRaw}`}
+                  className="flex items-center gap-3 border border-primary/30 bg-primary/10 p-3 text-xs font-semibold text-primary transition-all hover:bg-primary/20"
+                  data-testid="link-home-contact-phone"
+                >
+                  <Phone className="size-4 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">{display(language, 'اتصال مباشر', 'Direct line')}</span>
+                    <span className="truncate font-code">{contact.phone}</span>
+                  </div>
+                </a>
+              </div>
+
+              {/* Coordinates & Location Strip */}
+              <div className="flex items-center justify-between border border-border/80 bg-background/70 p-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid size-8 place-items-center border border-primary/30 bg-primary/10 text-primary">
+                    <MapPin className="size-3.5" />
+                  </span>
+                  <div>
+                    <span className="block font-semibold text-foreground">
+                      {display(language, contact.locationTitleAr, contact.locationTitleEn)}
+                    </span>
+                    <span className="font-code text-[11px] text-emerald-400">
+                      {contact.coordinatesDisplay}
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href={contact.mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-code text-[11px] text-primary hover:underline"
+                  data-testid="link-home-coordinates-map"
+                >
+                  <span>{display(language, 'الخريطة', 'Map')}</span>
+                  <ArrowUpRight className="size-3" />
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 rounded-2xl border border-border bg-background/60 p-5 text-sm text-muted-foreground">
               <div className="flex items-center gap-3"><span className="grid size-9 place-items-center border border-border bg-secondary text-primary"><Box className="size-4" /></span><span>{display(language, 'استشارة هندسية أولية', 'Initial engineering consultation')}</span></div>
               <div className="flex items-center gap-3"><span className="grid size-9 place-items-center border border-border bg-secondary text-primary"><Gauge className="size-4" /></span><span>{display(language, 'تقدير سريع للمواد والزمان', 'Fast estimate for materials and lead time')}</span></div>
               <div className="flex items-center gap-3"><span className="grid size-9 place-items-center border border-border bg-secondary text-primary"><Sparkles className="size-4" /></span><span>{display(language, 'ترتيب للتنفيذ أو التصميم', 'Next step for execution or design')}</span></div>

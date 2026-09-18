@@ -15,14 +15,31 @@ import {
 } from "@clerk/react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { Database, ShieldCheck, UserCheck, LogIn, UserPlus, KeyRound, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { safeStorage } from "./storage";
 
 export const CLERK_PUBLISHABLE_KEY = (
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || ""
 ).trim();
 
+// A valid Clerk key starts with pk_ and is not the dummy placeholder clear-opossum key.
+// In the AI Studio preview iframe (*.run.app) or localhost without custom domains,
+// Clerk test instances reject iframe ancestors and third-party cookies, so the robust local/Mongo provider is used.
 export const isClerkConfigured = Boolean(
-  CLERK_PUBLISHABLE_KEY && CLERK_PUBLISHABLE_KEY.startsWith("pk_"),
+  CLERK_PUBLISHABLE_KEY &&
+  CLERK_PUBLISHABLE_KEY.startsWith("pk_") &&
+  !CLERK_PUBLISHABLE_KEY.includes("clear-opossum") &&
+  (typeof window === "undefined" || (!window.location.hostname.includes("run.app") && !window.location.hostname.includes("localhost")))
 );
+
+const ClerkActiveContext = createContext<boolean>(false);
+
+export function ClerkActiveProvider({ children }: { children: ReactNode }) {
+  return (
+    <ClerkActiveContext.Provider value={true}>
+      {children}
+    </ClerkActiveContext.Provider>
+  );
+}
 
 export interface MongoUser {
   id: string;
@@ -72,22 +89,16 @@ const MongoAuthContext = createContext<MongoAuthContextValue>({
 
 export function MockAuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY);
-    } catch {
-      return null;
-    }
+    return safeStorage.getItem(STORAGE_KEY);
   });
   const [user, setUser] = useState<MongoUser | null>(() => {
     try {
-      const cached = localStorage.getItem(USER_STORAGE_KEY);
+      const cached = safeStorage.getItem(USER_STORAGE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed?.role === 'admin' && (!parsed.name || parsed.name.includes('المهندس المسؤول') || parsed.name.includes('AJ Admin') || parsed.name.includes('مدير النظام'))) {
           parsed.name = 'المدير';
-          try {
-            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(parsed));
-          } catch {}
+          safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(parsed));
         }
         return parsed;
       }
@@ -95,11 +106,7 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
   const [isSignedIn, setIsSignedIn] = useState<boolean>(() => {
-    try {
-      return Boolean(localStorage.getItem(STORAGE_KEY));
-    } catch {
-      return false;
-    }
+    return Boolean(safeStorage.getItem(STORAGE_KEY));
   });
   const [isLoaded, setIsLoaded] = useState(true);
   const [mongoStatus, setMongoStatus] = useState<{ configured: boolean; connected: boolean; isFallback: boolean; dbName: string } | null>(null);
@@ -121,7 +128,7 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
         }
       } catch {}
 
-      const existingToken = localStorage.getItem(STORAGE_KEY);
+      const existingToken = safeStorage.getItem(STORAGE_KEY);
       if (existingToken) {
         try {
           const meRes = await fetch("/api/auth/me", {
@@ -136,16 +143,12 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
               setUser(data.user);
               setIsSignedIn(true);
               setToken(existingToken);
-              try {
-                localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-              } catch {}
+              safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
               return;
             }
           } else if (meRes.status === 401 && mounted) {
-            try {
-              localStorage.removeItem(STORAGE_KEY);
-              localStorage.removeItem(USER_STORAGE_KEY);
-            } catch {}
+            safeStorage.removeItem(STORAGE_KEY);
+            safeStorage.removeItem(USER_STORAGE_KEY);
             setUser(null);
             setToken(null);
             setIsSignedIn(false);
@@ -177,10 +180,8 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setIsSignedIn(true);
-      try {
-        localStorage.setItem(STORAGE_KEY, data.token);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-      } catch {}
+      safeStorage.setItem(STORAGE_KEY, data.token);
+      safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       return { success: true, user: data.user };
     } catch (err: any) {
       return { success: false, error: err.message || "حدث خطأ أثناء الاتصال بالخادم" };
@@ -206,10 +207,8 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setIsSignedIn(true);
-      try {
-        localStorage.setItem(STORAGE_KEY, data.token);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-      } catch {}
+      safeStorage.setItem(STORAGE_KEY, data.token);
+      safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       return { success: true, user: data.user };
     } catch (err: any) {
       return { success: false, error: err.message || "حدث خطأ أثناء الاتصال بالخادم" };
@@ -236,10 +235,8 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
           setUser(data.user);
         }
         setIsSignedIn(true);
-        try {
-          localStorage.setItem(STORAGE_KEY, data.token);
-          if (data.user) localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-        } catch {}
+        safeStorage.setItem(STORAGE_KEY, data.token);
+        if (data.user) safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       }
       return { success: true, message: data.message };
     } catch (err: any) {
@@ -261,10 +258,8 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setIsSignedIn(true);
-      try {
-        localStorage.setItem(STORAGE_KEY, data.token);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-      } catch {}
+      safeStorage.setItem(STORAGE_KEY, data.token);
+      safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       return { success: true, user: data.user };
     } catch (err: any) {
       return { success: false, error: err.message || "حدث خطأ أثناء إنشاء الحساب" };
@@ -283,10 +278,8 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
         setToken(data.token);
         setUser(data.user);
         setIsSignedIn(true);
-        try {
-          localStorage.setItem(STORAGE_KEY, data.token);
-          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-        } catch {}
+        safeStorage.setItem(STORAGE_KEY, data.token);
+        safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       }
     } catch {}
   };
@@ -300,10 +293,8 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
         });
       } catch {}
     }
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
-    } catch {}
+    safeStorage.removeItem(STORAGE_KEY);
+    safeStorage.removeItem(USER_STORAGE_KEY);
     setToken(null);
     setUser(null);
     setIsSignedIn(false);
@@ -438,7 +429,8 @@ function useMongoOnlyAuth() {
 }
 
 export function useAuth() {
-  if (isClerkConfigured) {
+  const isClerkActive = useContext(ClerkActiveContext);
+  if (isClerkActive && isClerkConfigured) {
     return useClerkAndMongoAuth();
   }
   return useMongoOnlyAuth();
@@ -501,14 +493,16 @@ function useMongoOnlyClerk() {
 }
 
 export function useClerk() {
-  if (isClerkConfigured) {
+  const isClerkActive = useContext(ClerkActiveContext);
+  if (isClerkActive && isClerkConfigured) {
     return useClerkAndMongoClerk();
   }
   return useMongoOnlyClerk();
 }
 
 export function SignIn({ initialTab = "signin" }: { initialTab?: "signin" | "register" | "demo" }) {
-  if (isClerkConfigured) {
+  const isClerkActive = useContext(ClerkActiveContext);
+  if (isClerkActive && isClerkConfigured) {
     return <RealSignIn />;
   }
 
@@ -516,7 +510,8 @@ export function SignIn({ initialTab = "signin" }: { initialTab?: "signin" | "reg
 }
 
 export function SignUp(props: any) {
-  if (isClerkConfigured) {
+  const isClerkActive = useContext(ClerkActiveContext);
+  if (isClerkActive && isClerkConfigured) {
     return <RealSignUp {...props} />;
   }
   return <AuthCard defaultTab="register" />;

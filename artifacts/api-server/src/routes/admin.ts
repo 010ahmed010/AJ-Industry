@@ -451,7 +451,24 @@ router.get("/admin/clients", async (req: Request, res: Response): Promise<void> 
         !p.name?.includes("المدير")
     );
 
-    const clientsWithStats = clientProfilesOnly.map((p) => {
+    // Strictly deduplicate by userId to ensure distinct client entries
+    const uniqueProfilesMap = new Map<string, any>();
+    for (const p of clientProfilesOnly) {
+      const uId = String(p.userId || p._id);
+      if (!uniqueProfilesMap.has(uId)) {
+        uniqueProfilesMap.set(uId, p);
+      } else {
+        const prev = uniqueProfilesMap.get(uId);
+        const prevTime = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+        const curTime = new Date(p.updatedAt || p.createdAt || 0).getTime();
+        if (curTime > prevTime) {
+          uniqueProfilesMap.set(uId, p);
+        }
+      }
+    }
+    const deduplicatedProfiles = Array.from(uniqueProfilesMap.values());
+
+    const clientsWithStats = deduplicatedProfiles.map((p) => {
       const userRequests = requests.filter((r) => r.userId === p.userId);
       const userConsultations = consultations.filter((c) => c.userId === p.userId);
       return {
@@ -626,6 +643,54 @@ router.post("/admin/services/reset", async (req: Request, res: Response): Promis
     res.json({ success: true, services: list });
   } catch (err: any) {
     res.status(500).json({ error: "Failed to reset services", details: err?.message });
+  }
+});
+
+// GET /api/admin/contact - Get contact details and coordinates
+router.get("/admin/contact", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  try {
+    const { getContactDetails } = await import("../lib/contact-store");
+    const contact = await getContactDetails();
+    res.json(contact);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to load contact details", details: err?.message });
+  }
+});
+
+// PUT /api/admin/contact - Update contact details and coordinates
+router.put("/admin/contact", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  try {
+    const { updateContactDetails } = await import("../lib/contact-store");
+    const updated = await updateContactDetails(req.body);
+    res.json({ success: true, contact: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to update contact details", details: err?.message });
+  }
+});
+
+// POST /api/admin/contact/reset - Reset contact details and coordinates to factory defaults
+router.post("/admin/contact/reset", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  try {
+    const { resetContactDetails } = await import("../lib/contact-store");
+    const resetData = await resetContactDetails();
+    res.json({ success: true, contact: resetData });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to reset contact details", details: err?.message });
   }
 });
 
