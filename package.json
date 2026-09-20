@@ -6,8 +6,7 @@
   "type": "module",
   "workspaces": [
     "artifacts/*",
-    "lib/*",
-    "scripts"
+    "lib/*"
   ],
   "scripts": {
     "dev": "tsx server.ts",

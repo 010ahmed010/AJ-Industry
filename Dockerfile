@@ -11,8 +11,6 @@ COPY artifacts/aj-industry/package*.json ./artifacts/aj-industry/
 COPY artifacts/api-server/package*.json ./artifacts/api-server/
 COPY lib/api-client-react/package*.json ./lib/api-client-react/
 COPY lib/api-zod/package*.json ./lib/api-zod/
-COPY lib/db/package*.json ./lib/db/
-COPY scripts/package*.json ./scripts/
 
 # Install all workspace dependencies for compilation
 RUN npm install
