@@ -1,11 +1,12 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import fs from "node:fs";
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import apiApp from "./artifacts/api-server/src/app";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentDir =
+  typeof __dirname !== "undefined"
+    ? __dirname
+    : process.cwd();
 const PORT = 3000;
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -15,9 +16,10 @@ async function startServer() {
   // Mount backend API server
   app.use(apiApp);
 
-  const clientDir = path.resolve(__dirname, "artifacts/aj-industry");
+  const clientDir = path.resolve(currentDir, "artifacts/aj-industry");
 
   if (!isProduction) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true, host: "0.0.0.0" },
       appType: "spa",
@@ -25,7 +27,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(__dirname, "artifacts/aj-industry/dist/public");
+    const cwdDistPath = path.resolve(process.cwd(), "artifacts/aj-industry/dist/public");
+    const localDistPath = path.resolve(currentDir, "artifacts/aj-industry/dist/public");
+    const distPath = fs.existsSync(cwdDistPath) ? cwdDistPath : localDistPath;
+
     app.use(express.static(distPath));
     app.get("*all", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));

@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "lint": "tsc --noEmit",
-    "build": "npm run build:client && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "npm run build:client && esbuild server.ts --bundle --platform=node --format=cjs --external:express --external:mongodb --external:@clerk/* --external:cors --external:pino --external:pino-http --external:vite --sourcemap --outfile=dist/server.cjs",
     "build:client": "npm run build --workspace=@workspace/aj-industry",
     "start": "node dist/server.cjs"
   },

@@ -1,0 +1,201 @@
+AJ-Industry | Industrial Engineering Solutions Docker Deployment Guide
+======================================================================== Ahmed Has Developed This Site
+
+REQUIREMENTS
+------------
+- Docker installed on your VPS (Ubuntu/Debian, CentOS, or any Linux distribution)
+- A MongoDB Atlas connection string (or local MongoDB container instance)
+  * Atlas Network Access must whitelist your VPS public IP address (or use 0.0.0.0/0)
+- (Optional) Clerk Authentication keys if you are using Clerk for client sign-in:
+  * CLERK_PUBLISHABLE_KEY (or VITE_CLERK_PUBLISHABLE_KEY)
+  * CLERK_SECRET_KEY
+
+
+CONFIGURATION & SECRETS (.env FILE)
+------------------------------------
+You will provide your secrets via an environment file.
+Create a secure file on your server, for example at `/etc/aj-industry.env` or `./.env`:
+
+    # ==========================================
+    # DATABASE CONFIGURATION
+    # ==========================================
+    # MongoDB Atlas connection string (URI)
+    # Example: mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
+    MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority
+
+    # MongoDB database name (default: aj_industry)
+    MONGODB_DB_NAME=aj_industry
+
+    # ==========================================
+    # ADMIN ACCOUNT CREDENTIALS
+    # ==========================================
+    # Default admin credentials created automatically on initial boot
+    ADMIN_USERNAME=admin
+    ADMIN_PASSWORD=ahmedahmed
+
+    # ==========================================
+    # AUTHENTICATION (CLERK - OPTIONAL)
+    # ==========================================
+    # If using Clerk for client authentication:
+    CLERK_PUBLISHABLE_KEY=pk_live_your_clerk_publishable_key
+    CLERK_SECRET_KEY=sk_live_your_clerk_secret_key
+    VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_clerk_publishable_key
+
+    # ==========================================
+    # RUNTIME SERVER SETTINGS
+    # ==========================================
+    NODE_ENV=production
+    PORT=3000
+
+Secure the env file so only root or authorized users can read it:
+
+    chmod 600 /etc/aj-industry.env
+
+
+BUILD THE DOCKER IMAGE
+-----------------------
+Upload your project files to the VPS (or clone the repository), then build the Docker image:
+
+    docker build -t aj-industry:v1.0 .
+
+If you are using Clerk authentication and want the publishable key baked into the frontend build:
+
+    docker build \
+      --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_key_here \
+      -t aj-industry:v1.0 .
+
+To rebuild after making code updates:
+
+    docker build --no-cache -t aj-industry:v1.0 .
+
+
+RUN THE CONTAINER
+------------------
+Using the env file (RECOMMENDED — secure and prevents secrets in shell history):
+
+    docker run -d \
+      --restart unless-stopped \
+      --env-file /etc/aj-industry.env \
+      -p 80:3000 \
+      --name aj-industry \
+      aj-industry:v1.0
+
+Using inline flags (for quick testing or troubleshooting):
+
+    docker run -d \
+      --restart unless-stopped \
+      -p 80:3000 \
+      -e MONGODB_URI="mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true&w=majority" \
+      -e MONGODB_DB_NAME="aj_industry" \
+      -e ADMIN_USERNAME="admin" \
+      -e ADMIN_PASSWORD="ahmedahmed" \
+      --name aj-industry \
+      aj-industry:v1.0
+
+PORT MAPPING NOTE:
+The application inside the container runs on port 3000.
+`-p 80:3000` routes external HTTP traffic on port 80 directly to the application.
+If you use Nginx / Traefik / Caddy as a reverse proxy with SSL, you can map:
+`-p 127.0.0.1:3000:3000` and proxy your domain (e.g., https://aj-industry.com) to port 3000.
+
+NOTE: `--restart unless-stopped` ensures the container automatically restarts
+if it ever crashes or after the host server reboots.
+
+
+DEFAULT ADMIN LOGIN
+--------------------
+Once the container is running, navigate to:
+    http://your-server-ip/admin/login
+
+Credentials:
+    Username : admin (or the value set in ADMIN_USERNAME)
+    Password : ahmedahmed (or the value set in ADMIN_PASSWORD)
+
+On first startup, the administrative user is automatically verified and seeded.
+You can manage service offerings, contact information, review 3D print quote requests,
+and process client consultations directly through the Admin Portal.
+
+
+IMPORTANT - MONGODB CONNECTION
+--------------------------------
+- Persistent Data:
+  When `MONGODB_URI` is provided, all client inquiries, 3D printing orders,
+  consultation requests, contact coordinates, and admin sessions are permanently
+  stored in MongoDB Atlas.
+
+- Network Access:
+  In your MongoDB Atlas Dashboard -> Network Access -> IP Access List:
+  Make sure your VPS static IP address is added, or add `0.0.0.0/0` (Allow Access from Anywhere)
+  protected by a strong database user password.
+
+- Graceful Offline Resilience:
+  If `MONGODB_URI` is omitted or temporarily unreachable, AJ-Industry automatically
+  operates using high-speed in-memory storage so the site and demo features never crash.
+
+
+IMPORTANT - CLERK & CLIENT DASHBOARD
+-------------------------------------
+- The client portal supports both Clerk authentication (for live multi-tenant accounts)
+  and local demonstration mode.
+- If you use Clerk, set `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in your `.env` file.
+- When deleting or modifying users from the Admin Dashboard, the backend communicates
+  directly with Clerk's API to keep your database and authentication directory in sync.
+
+
+ENVIRONMENT VARIABLES SUMMARY
+-------------------------------
+MONGODB_URI                 - (Recommended) MongoDB Atlas connection string for persistence
+MONGODB_DB_NAME             - (Optional) MongoDB database name, default: aj_industry
+ADMIN_USERNAME              - (Optional) Admin login username, default: admin
+ADMIN_PASSWORD              - (Optional) Admin login password, default: ahmedahmed
+CLERK_PUBLISHABLE_KEY       - (Optional) Clerk public key for client authentication
+CLERK_SECRET_KEY            - (Optional) Clerk secret key for server-side management
+VITE_CLERK_PUBLISHABLE_KEY  - (Optional) Client-side Clerk publishable key
+PORT                        - (Optional) Container internal port, default: 3000
+NODE_ENV                    - Set automatically to "production" by the Dockerfile
+
+
+USEFUL DOCKER COMMANDS
+-----------------------
+View live streaming logs:
+    docker logs -f aj-industry
+
+View the last 100 lines of logs:
+    docker logs --tail 100 aj-industry
+
+Stop the container:
+    docker stop aj-industry
+
+Start a stopped container (preserves existing env variables):
+    docker start aj-industry
+
+Restart the container:
+    docker restart aj-industry
+
+Remove the container (to run a fresh one or change port settings):
+    docker rm -f aj-industry
+
+Check running status:
+    docker ps
+
+Check container CPU & Memory usage:
+    docker stats aj-industry
+
+Open a shell inside the running container:
+    docker exec -it aj-industry sh
+
+
+UPGRADING TO A NEW VERSION
+----------------------------
+1. Pull or upload the latest project files to your VPS.
+2. Build the updated Docker image:
+       docker build --no-cache -t aj-industry:v1.1 .
+3. Stop and remove the existing container:
+       docker rm -f aj-industry
+4. Launch the new container using your existing environment file:
+       docker run -d \
+         --restart unless-stopped \
+         --env-file /etc/aj-industry.env \
+         -p 80:3000 \
+         --name aj-industry \
+         aj-industry:v1.1

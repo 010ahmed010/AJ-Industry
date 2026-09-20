@@ -19,17 +19,20 @@ async function ensureDefaultUsers() {
     const users = db.collection<UserRecord>("users");
     const now = new Date();
 
-    // Ensure admin user exists with username 'admin' and password 'ahmedahmed'
+    const defaultPassword = process.env.ADMIN_PASSWORD || "ahmedahmed";
+    const defaultUsername = process.env.ADMIN_USERNAME || "admin";
+
+    // Ensure admin user exists with username 'admin' (or custom ADMIN_USERNAME)
     let admin = await users.findOne({
-      $or: [{ username: "admin" }, { role: "admin" }, { email: "admin@aj-industry.com" }],
+      $or: [{ username: defaultUsername }, { role: "admin" }, { email: "admin@aj-industry.com" }],
     });
 
     if (!admin) {
       const demoAdmin: UserRecord = {
         _id: "admin_super_user",
-        username: "admin",
+        username: defaultUsername,
         email: "admin@aj-industry.com",
-        passwordHash: hashPassword("ahmedahmed"),
+        passwordHash: hashPassword(defaultPassword),
         name: "المدير",
         company: "AJ-Industry Operations",
         role: "admin",
@@ -37,18 +40,21 @@ async function ensureDefaultUsers() {
         updatedAt: now,
       };
       await users.insertOne(demoAdmin);
-      console.log("[Auth] Seeded default admin with username: 'admin' and password: 'ahmedahmed'");
+      console.log(`[Auth] Seeded default admin with username: '${defaultUsername}'`);
     } else {
-      // Ensure the admin account has username 'admin' and name 'المدير'
-      const needsPasswordUpdate = verifyPassword("Admin@123", admin.passwordHash) || !admin.username;
+      // Ensure the admin account has username and name 'المدير'
+      const needsPasswordUpdate =
+        verifyPassword("Admin@123", admin.passwordHash) ||
+        !admin.username ||
+        (process.env.ADMIN_PASSWORD && !verifyPassword(process.env.ADMIN_PASSWORD, admin.passwordHash));
       await users.updateOne(
         { _id: admin._id },
         {
           $set: {
-            username: "admin",
+            username: defaultUsername,
             name: "المدير",
             role: "admin",
-            ...(needsPasswordUpdate ? { passwordHash: hashPassword("ahmedahmed") } : {}),
+            ...(needsPasswordUpdate ? { passwordHash: hashPassword(defaultPassword) } : {}),
             updatedAt: now,
           },
         },
