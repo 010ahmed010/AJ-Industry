@@ -15,4 +15,5 @@ export const ClientRequestStatus = {
   quoted: 'quoted',
   scheduled: 'scheduled',
   completed: 'completed',
+  suspended: 'suspended',
 } as const;

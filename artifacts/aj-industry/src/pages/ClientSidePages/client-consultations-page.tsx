@@ -1,13 +1,30 @@
 import { type FormEvent, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import {
+  customFetch,
   getGetClientConsultationsQueryKey,
   useCreateClientConsultation,
   useGetClientConsultations,
   type ClientConsultation,
   type ClientConsultationInputProviderType,
 } from '@workspace/api-client-react';
-import { BookOpen, Building2, CircleCheck, Clock3, MessageCircle, Search, Send, UserRound, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  BookOpen,
+  Building2,
+  Check,
+  CircleCheck,
+  Clock3,
+  Edit3,
+  Lock,
+  MessageCircle,
+  RefreshCw,
+  Search,
+  Send,
+  Trash2,
+  UserRound,
+  X,
+} from 'lucide-react';
 import { clientText, ClientDataError, PageIntro, Panel, PanelHeader, Tag, useClientDashboard } from './client-dashboard-shell';
 
 type SpecialistForm = {
@@ -55,8 +72,72 @@ function RequestSuccess({ reference, language }: { reference: string; language: 
   </div>;
 }
 
-function ConsultationHistory({ consultations, language }: { consultations: ClientConsultation[]; language: 'ar' | 'en' }) {
+function ConsultationHistory({
+  consultations,
+  language,
+  onUpdated,
+}: {
+  consultations: ClientConsultation[];
+  language: 'ar' | 'en';
+  onUpdated?: () => void;
+}) {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingConsultation, setEditingConsultation] = useState<ClientConsultation | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', specialty: '', details: '' });
+  const [consultationToDelete, setConsultationToDelete] = useState<ClientConsultation | null>(null);
+  const [actionError, setActionError] = useState('');
+
+  const editMutation = useMutation({
+    mutationFn: async (payload: { id: string; data: { title: string; specialty?: string; details: string } }) => {
+      return customFetch(`/api/client/consultations/${payload.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload.data),
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: getGetClientConsultationsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ['admin-consultations'] });
+      void queryClient.invalidateQueries({ queryKey: ['client-overview'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      setEditingConsultation(null);
+      setActionError('');
+      onUpdated?.();
+    },
+    onError: (err: any) => {
+      setActionError(err?.message || clientText(language, 'تعذر تعديل طلب الاستشارة', 'Failed to update consultation'));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return customFetch(`/api/client/consultations/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: getGetClientConsultationsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ['admin-consultations'] });
+      void queryClient.invalidateQueries({ queryKey: ['client-overview'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      setConsultationToDelete(null);
+      setActionError('');
+      onUpdated?.();
+    },
+    onError: (err: any) => {
+      setActionError(err?.message || clientText(language, 'تعذر حذف طلب الاستشارة', 'Failed to delete consultation'));
+    },
+  });
+
+  const openEdit = (c: ClientConsultation) => {
+    setActionError('');
+    setEditingConsultation(c);
+    setEditForm({
+      title: c.title || '',
+      specialty: c.specialty || '',
+      details: c.details || '',
+    });
+  };
 
   if (consultations.length === 0) {
     return (
@@ -135,12 +216,25 @@ function ConsultationHistory({ consultations, language }: { consultations: Clien
         <div className="divide-y divide-border/70 max-h-[540px] overflow-y-auto overscroll-contain">
           {filtered.map((consultation) => {
             const c = consultation as any;
+            const canEdit = consultation.status === 'submitted';
+            const canDelete = ['submitted', 'completed', 'suspended'].includes(consultation.status);
+
             return (
               <div key={consultation.id} className="flex flex-col gap-3 p-5 sm:p-6 transition-colors hover:bg-secondary/15">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Tag tone={consultation.status === 'completed' ? 'green' : consultation.status === 'submitted' ? 'amber' : 'blue'}>
+                      <Tag
+                        tone={
+                          consultation.status === 'completed'
+                            ? 'green'
+                            : consultation.status === 'submitted'
+                            ? 'amber'
+                            : consultation.status === 'suspended'
+                            ? 'amber'
+                            : 'blue'
+                        }
+                      >
                         {statusLabel(language, consultation)}
                       </Tag>
                       <span className="font-code text-[9px] text-muted-foreground font-semibold">
@@ -186,9 +280,232 @@ function ConsultationHistory({ consultations, language }: { consultations: Clien
                     )}
                   </div>
                 )}
+
+                {/* Actions row for client */}
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
+                  <div className="flex items-center gap-2">
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={() => openEdit(consultation)}
+                        className="inline-flex items-center gap-1.5 border border-border/80 bg-secondary/30 px-3 py-1.5 font-code text-xs font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <Edit3 className="size-3.5" />
+                        <span>{clientText(language, 'تعديل الاستشارة', 'Edit Consultation')}</span>
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 font-code text-[11px] text-muted-foreground/80">
+                        <Lock className="size-3 text-muted-foreground" />
+                        <span>
+                          {consultation.status === 'completed'
+                            ? clientText(language, 'مكتملة (غير قابلة للتعديل)', 'Completed (Locked)')
+                            : consultation.status === 'suspended'
+                            ? clientText(language, 'معلّقة مؤقتاً', 'Suspended')
+                            : clientText(language, 'قيد الدراسة الهندسية (التعديل مقفل)', 'In Review (Locked)')}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    {canDelete ? (
+                      <button
+                        type="button"
+                        onClick={() => setConsultationToDelete(consultation)}
+                        className="inline-flex items-center gap-1 border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 font-code text-xs font-medium text-rose-400 transition-colors hover:border-rose-500 hover:bg-rose-500/20"
+                        title={clientText(language, 'حذف هذه الاستشارة', 'Delete this consultation')}
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span>{clientText(language, 'حذف', 'Delete')}</span>
+                      </button>
+                    ) : (
+                      <span
+                        className="font-code text-[10px] text-muted-foreground"
+                        title={clientText(
+                          language,
+                          'لا يمكن حذف الاستشارة أثناء جدولتها أو تعيين مهندس لها',
+                          'Cannot delete consultation during active engineering assignment',
+                        )}
+                      >
+                        {clientText(language, 'الحذف مقفل أثناء التنسيق النشط', 'Delete locked during active assignment')}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Client Edit Consultation Modal */}
+      {editingConsultation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col border border-border bg-[#0b1528] shadow-2xl">
+            <div className="flex shrink-0 items-start justify-between border-b border-border p-5">
+              <div>
+                <span className="font-code text-[10px] tracking-widest text-primary">
+                  EDIT CONSULTATION / {editingConsultation.reference}
+                </span>
+                <h3 className="mt-1 font-heading text-lg font-bold text-foreground">
+                  {clientText(language, 'تعديل تفاصيل الاستشارة', 'Edit Consultation Details')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingConsultation(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                editMutation.mutate({
+                  id: editingConsultation.id,
+                  data: {
+                    title: editForm.title.trim(),
+                    specialty: editForm.specialty.trim() || undefined,
+                    details: editForm.details.trim(),
+                  },
+                });
+              }}
+              className="flex-1 overflow-y-auto p-5 space-y-4 text-sm"
+            >
+              {actionError && (
+                <div className="p-3 border border-rose-500/50 bg-rose-500/10 text-rose-400 text-xs">
+                  {actionError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  {clientText(language, 'عنوان الاستشارة', 'Consultation Title')}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  {clientText(language, 'المجال أو التخصص', 'Specialty / Field')}
+                </label>
+                <input
+                  type="text"
+                  value={editForm.specialty}
+                  onChange={(e) => setEditForm({ ...editForm, specialty: e.target.value })}
+                  placeholder={clientText(language, 'ميكانيكا، كهرباء، أتمتة…', 'Mechanical, electrical, automation…')}
+                  className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  {clientText(language, 'تفاصيل الاستشارة أو الطلب', 'Details / Brief')}
+                </label>
+                <textarea
+                  rows={6}
+                  required
+                  value={editForm.details}
+                  onChange={(e) => setEditForm({ ...editForm, details: e.target.value })}
+                  placeholder={clientText(language, 'اشرح المشكلة أو النتيجة المطلوبة…', 'Explain the problem or outcome needed…')}
+                  className="mt-1.5 w-full border border-border bg-secondary/40 p-3 text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingConsultation(null)}
+                  className="h-10 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+                >
+                  {clientText(language, 'إلغاء', 'Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={editMutation.isPending}
+                  className="flex h-10 items-center gap-2 bg-primary px-5 font-code text-xs font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  {editMutation.isPending ? (
+                    <RefreshCw className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  <span>{clientText(language, 'حفظ التعديلات', 'Save Changes')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Client Delete Confirmation Modal */}
+      {consultationToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-md border border-rose-500/40 bg-[#0b1528] p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/15 text-rose-400">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-bold text-foreground">
+                  {clientText(language, 'تأكيد حذف الاستشارة', 'Confirm Delete Consultation')}
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  {clientText(
+                    language,
+                    `هل تريد بالتأكيد حذف استشارة "${consultationToDelete.title}" (المرجع: ${consultationToDelete.reference})؟`,
+                    `Are you sure you want to delete "${consultationToDelete.title}" (${consultationToDelete.reference})?`,
+                  )}
+                </p>
+                {actionError && (
+                  <p className="mt-2 text-xs text-rose-400">{actionError}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-border/60 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setConsultationToDelete(null);
+                  setActionError('');
+                }}
+                disabled={deleteMutation.isPending}
+                className="h-9 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50"
+              >
+                {clientText(language, 'إلغاء', 'Cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate(consultationToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="flex h-9 items-center gap-2 border border-rose-500/60 bg-rose-600 px-4 font-code text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? (
+                  <RefreshCw className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                <span>{clientText(language, 'نعم، حذف الاستشارة', 'Yes, Delete')}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -266,7 +583,7 @@ export function ClientConsultationsPage() {
           <button disabled={isSubmitting} type="submit" className="inline-flex h-12 items-center justify-center gap-2 border border-primary/60 bg-primary/10 px-6 text-sm font-bold text-primary transition-colors hover:bg-primary/20 disabled:cursor-wait disabled:opacity-60"><Send className="size-4" />{isSubmitting ? clientText(language, 'جارٍ الإرسال…', 'Sending…') : clientText(language, 'إرسال طلب الترشيح', 'Send specialist request')}</button>
         </form></Panel>
       </div>
-      <Panel className="mt-6"><PanelHeader eyebrow="REQUEST LOG / PERSISTED" title={clientText(language, 'طلبات الاستشارة السابقة', 'Previous consultation requests')} />{consultationsQuery.isLoading ? <p className="p-6 text-sm text-muted-foreground">{clientText(language, 'جارٍ تحميل الطلبات…', 'Loading requests…')}</p> : consultationsQuery.isError ? <div className="p-6 text-sm text-destructive-foreground">{clientText(language, 'تعذر تحميل سجل الاستشارات.', 'The consultation history could not be loaded.')}</div> : <ConsultationHistory consultations={consultationsQuery.data ?? []} language={language} />}</Panel>
+      <Panel className="mt-6"><PanelHeader eyebrow="REQUEST LOG / PERSISTED" title={clientText(language, 'طلبات الاستشارة السابقة', 'Previous consultation requests')} />{consultationsQuery.isLoading ? <p className="p-6 text-sm text-muted-foreground">{clientText(language, 'جارٍ تحميل الطلبات…', 'Loading requests…')}</p> : consultationsQuery.isError ? <div className="p-6 text-sm text-destructive-foreground">{clientText(language, 'تعذر تحميل سجل الاستشارات.', 'The consultation history could not be loaded.')}</div> : <ConsultationHistory consultations={consultationsQuery.data ?? []} language={language} onUpdated={() => void consultationsQuery.refetch()} />}</Panel>
       <div className="mt-4 grid gap-3 sm:grid-cols-3"><div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4"><Building2 className="size-4 text-primary" /><span className="text-xs text-muted-foreground">{clientText(language, 'طلبات محفوظة لفريق الإدارة', 'Requests saved for the admin team')}</span></div><div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4"><BookOpen className="size-4 text-primary" /><span className="text-xs text-muted-foreground">{clientText(language, 'ترشيحات حسب المجال', 'Recommendations by specialty')}</span></div><div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4"><Clock3 className="size-4 text-primary" /><span className="text-xs text-muted-foreground">{clientText(language, 'تحديث الحالة من الفريق', 'Status updated by the team')}</span></div></div>
     </>}
   </div>;

@@ -16,6 +16,10 @@ import {
   UserCheck,
   Users,
   X,
+  AlertTriangle,
+  PauseCircle,
+  PlayCircle,
+  Trash2,
 } from 'lucide-react';
 import {
   adminText,
@@ -81,6 +85,35 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
     },
   });
 
+  const [consultationToDelete, setConsultationToDelete] = useState<AdminConsultation | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return customFetch(`/api/admin/consultations/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-consultations'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      void queryClient.invalidateQueries({ queryKey: ['client-consultations'] });
+      setConsultationToDelete(null);
+      setSelectedConsultation(null);
+    },
+  });
+
+  const toggleSuspend = (c: AdminConsultation) => {
+    const isCurrentlySuspended = c.status === 'suspended';
+    const nextStatus = isCurrentlySuspended ? 'reviewing' : 'suspended';
+    updateMutation.mutate({
+      id: c.id,
+      status: nextStatus,
+      adminResponse: isCurrentlySuspended
+        ? (c.adminResponse || 'تم استئناف الاستشارة الهندسية')
+        : (c.adminResponse || 'تم تعليق الاستشارة مؤقتاً لمراجعة المتطلبات'),
+    });
+  };
+
   const openEditModal = (c: AdminConsultation) => {
     setSelectedConsultation(c);
     setEditStatus(c.status);
@@ -108,6 +141,7 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
     { key: 'reviewing', labelAr: 'قيد الدراسة', labelEn: 'Reviewing' },
     { key: 'contacted', labelAr: 'تم التواصل', labelEn: 'Contacted' },
     { key: 'completed', labelAr: 'منجز', labelEn: 'Completed' },
+    { key: 'suspended', labelAr: 'معلّق مؤقتاً', labelEn: 'Suspended' },
   ];
 
   return (
@@ -296,14 +330,49 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
                   )}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => openEditModal(c)}
-                    className="flex h-10 items-center gap-2 bg-primary px-4 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5"
+                    className="flex h-10 items-center gap-2 bg-primary px-3.5 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5"
                   >
                     <MessageSquare className="size-3.5" />
-                    <span>{adminText(language, 'الرد وجدولة اللقاء', 'Reply & Schedule')}</span>
+                    <span>{adminText(language, 'الرد والجدولة', 'Reply & Schedule')}</span>
+                  </button>
+
+                  {/* Quick Suspend / Resume Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleSuspend(c)}
+                    title={c.status === 'suspended' ? adminText(language, 'استئناف الاستشارة', 'Resume Consultation') : adminText(language, 'تعليق الاستشارة', 'Suspend Consultation')}
+                    className={`flex h-10 items-center gap-1.5 border px-3 font-code text-xs font-semibold transition-colors ${
+                      c.status === 'suspended'
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                    }`}
+                  >
+                    {c.status === 'suspended' ? (
+                      <>
+                        <PlayCircle className="size-3.5" />
+                        <span>{adminText(language, 'استئناف', 'Resume')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <PauseCircle className="size-3.5" />
+                        <span>{adminText(language, 'تعليق', 'Suspend')}</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    type="button"
+                    onClick={() => setConsultationToDelete(c)}
+                    title={adminText(language, 'حذف الاستشارة نهائياً', 'Delete Consultation')}
+                    className="flex h-10 items-center gap-1.5 border border-rose-500/40 bg-rose-500/10 px-3 font-code text-xs font-semibold text-rose-400 transition-colors hover:border-rose-500/70 hover:bg-rose-500/20"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span className="hidden sm:inline">{adminText(language, 'حذف', 'Delete')}</span>
                   </button>
                 </div>
               </div>
@@ -355,6 +424,7 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
                   <option value="reviewing">{adminText(language, 'قيد المراجعة والتحضير (Reviewing)', 'Reviewing')}</option>
                   <option value="contacted">{adminText(language, 'تم التواصل والجدولة (Contacted)', 'Contacted & Scheduled')}</option>
                   <option value="completed">{adminText(language, 'تم إنجاز الاستشارة (Completed)', 'Completed')}</option>
+                  <option value="suspended">{adminText(language, 'معلّق مؤقتاً (Suspended)', 'Suspended / On-Hold')}</option>
                 </select>
               </div>
 
@@ -400,29 +470,97 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                 <button
                   type="button"
-                  onClick={() => setSelectedConsultation(null)}
-                  className="h-10 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+                  onClick={() => {
+                    const c = selectedConsultation;
+                    setSelectedConsultation(null);
+                    setConsultationToDelete(c);
+                  }}
+                  className="flex items-center gap-1.5 border border-rose-500/40 bg-rose-500/10 px-3 py-2 font-code text-xs font-semibold text-rose-400 hover:bg-rose-500/20"
                 >
-                  {adminText(language, 'إلغاء', 'Cancel')}
+                  <Trash2 className="size-3.5" />
+                  <span>{adminText(language, 'حذف الاستشارة', 'Delete Consultation')}</span>
                 </button>
 
-                <button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  className="flex h-10 items-center gap-2 bg-primary px-5 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-50"
-                >
-                  {updateMutation.isPending ? (
-                    <RefreshCw className="size-3.5 animate-spin" />
-                  ) : (
-                    <Check className="size-3.5" />
-                  )}
-                  <span>{adminText(language, 'حفظ الرد وإرساله', 'Save Response')}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConsultation(null)}
+                    className="h-10 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+                  >
+                    {adminText(language, 'إلغاء', 'Cancel')}
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    className="flex h-10 items-center gap-2 bg-primary px-5 font-code text-xs font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+                  >
+                    {updateMutation.isPending ? (
+                      <RefreshCw className="size-3.5 animate-spin" />
+                    ) : (
+                      <Check className="size-3.5" />
+                    )}
+                    <span>{adminText(language, 'حفظ الرد وإرساله', 'Save Response')}</span>
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Consultation Confirmation Modal */}
+      {consultationToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-md border border-rose-500/40 bg-[#0b1528] p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/15 text-rose-400">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-bold text-foreground">
+                  {adminText(language, 'تأكيد حذف الاستشارة الهندسية', 'Confirm Delete Consultation')}
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  {adminText(
+                    language,
+                    `هل أنت متأكد من حذف استشارة "${consultationToDelete.title}" (المرجع: ${consultationToDelete.reference})؟ سيتم حذفها نهائياً من النظام.`,
+                    `Are you sure you want to permanently delete consultation "${consultationToDelete.title}" (${consultationToDelete.reference})? This action cannot be undone.`,
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-border/60 pt-4">
+              <button
+                type="button"
+                onClick={() => setConsultationToDelete(null)}
+                disabled={deleteMutation.isPending}
+                className="h-9 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50"
+              >
+                {adminText(language, 'إلغاء', 'Cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate(consultationToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="flex h-9 items-center gap-2 border border-rose-500/60 bg-rose-600 px-4 font-code text-xs font-bold text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? (
+                  <RefreshCw className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                <span>{adminText(language, 'نعم، احذف الاستشارة', 'Yes, Delete Consultation')}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

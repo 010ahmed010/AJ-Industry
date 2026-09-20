@@ -14,4 +14,5 @@ export const ClientConsultationStatus = {
   reviewing: 'reviewing',
   contacted: 'contacted',
   completed: 'completed',
+  suspended: 'suspended',
 } as const;

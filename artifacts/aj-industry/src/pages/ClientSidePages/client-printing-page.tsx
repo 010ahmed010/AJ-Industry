@@ -1,17 +1,22 @@
 import { type FormEvent, useState } from 'react';
-import { useCreateClientPrintRequest, getGetClientOverviewQueryKey } from '@workspace/api-client-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCreateClientPrintRequest, getGetClientOverviewQueryKey, customFetch } from '@workspace/api-client-react';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import {
+  AlertTriangle,
   Calendar,
   Check,
   CircleCheck,
   DollarSign,
+  Edit3,
   Info,
+  Lock,
   Package,
   Printer,
+  RefreshCw,
   Search,
   Send,
   Timer,
+  Trash2,
   X,
 } from 'lucide-react';
 import {
@@ -35,6 +40,7 @@ function requestStatus(language: 'ar' | 'en', status: string) {
     quoted: ['تم التسعير', 'Quoted'],
     scheduled: ['مجدول', 'Scheduled'],
     completed: ['مكتمل', 'Completed'],
+    suspended: ['معلّق مؤقتاً', 'Suspended'],
   };
   return labels[status]?.[language === 'ar' ? 0 : 1] ?? status;
 }
@@ -43,12 +49,76 @@ function SavedPrintRequests({
   requests,
   isLoading,
   language,
+  onUpdated,
 }: {
   requests: ClientRequest[];
   isLoading: boolean;
   language: 'ar' | 'en';
+  onUpdated?: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingRequest, setEditingRequest] = useState<ClientRequest | null>(null);
+  const [editForm, setEditForm] = useState<PrintForm>(initialForm);
+  const [requestToDelete, setRequestToDelete] = useState<ClientRequest | null>(null);
+  const [actionError, setActionError] = useState('');
+
+  const editMutation = useMutation({
+    mutationFn: async (payload: { id: string; data: Partial<PrintForm> }) => {
+      return customFetch(`/api/client/requests/${payload.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...payload.data,
+          quantity: payload.data.quantity ? Number(payload.data.quantity) : undefined,
+        }),
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['client-requests'] });
+      void queryClient.invalidateQueries({ queryKey: getGetClientOverviewQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      setEditingRequest(null);
+      setActionError('');
+      onUpdated?.();
+    },
+    onError: (err: any) => {
+      setActionError(err?.message || clientText(language, 'تعذر تعديل الطلب', 'Failed to update request'));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return customFetch(`/api/client/requests/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['client-requests'] });
+      void queryClient.invalidateQueries({ queryKey: getGetClientOverviewQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      setRequestToDelete(null);
+      setActionError('');
+      onUpdated?.();
+    },
+    onError: (err: any) => {
+      setActionError(err?.message || clientText(language, 'تعذر حذف الطلب', 'Failed to delete request'));
+    },
+  });
+
+  const openEdit = (r: ClientRequest) => {
+    setActionError('');
+    setEditingRequest(r);
+    setEditForm({
+      projectName: r.projectName || '',
+      material: r.material || 'PETG-CF',
+      finish: r.finish || 'functional',
+      quantity: String(r.quantity || 1),
+      timeline: r.timeline || 'standard',
+      notes: r.notes || '',
+    });
+  };
 
   if (isLoading) {
     return (
@@ -140,84 +210,358 @@ function SavedPrintRequests({
         </div>
       ) : (
         <div className="divide-y divide-border/70 max-h-[580px] overflow-y-auto overscroll-contain">
-          {filteredRequests.map((request) => (
-            <div key={request.id} className="p-5 transition-colors hover:bg-secondary/15">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <Tag
-                    tone={
-                      request.status === 'completed'
-                        ? 'green'
-                        : request.status === 'submitted'
-                        ? 'amber'
-                        : 'blue'
-                    }
-                  >
-                    {requestStatus(language, request.status)}
-                  </Tag>
-                  <p className="mt-2.5 font-display text-lg font-bold text-foreground">
-                    {request.projectName}
-                  </p>
+          {filteredRequests.map((request) => {
+            const canEdit = request.status === 'submitted';
+            const canDelete = ['submitted', 'completed', 'suspended'].includes(request.status);
+
+            return (
+              <div key={request.id} className="p-5 transition-colors hover:bg-secondary/15">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <Tag
+                      tone={
+                        request.status === 'completed'
+                          ? 'green'
+                          : request.status === 'submitted'
+                          ? 'amber'
+                          : request.status === 'suspended'
+                          ? 'amber'
+                          : 'blue'
+                      }
+                    >
+                      {requestStatus(language, request.status)}
+                    </Tag>
+                    <p className="mt-2.5 font-display text-lg font-bold text-foreground">
+                      {request.projectName}
+                    </p>
+                  </div>
+                  <span className="font-code text-[9px] font-semibold text-muted-foreground">
+                    {request.reference}
+                  </span>
                 </div>
-                <span className="font-code text-[9px] font-semibold text-muted-foreground">
-                  {request.reference}
-                </span>
-              </div>
 
-              <div className="mt-3.5 grid gap-2 border-t border-border/70 pt-3.5 text-xs text-muted-foreground sm:grid-cols-2">
-                <span>
-                  {clientText(language, 'المادة', 'Material')}:{' '}
-                  <strong className="text-foreground">{request.material}</strong>
-                </span>
-                <span>
-                  {clientText(language, 'الكمية', 'Quantity')}:{' '}
-                  <strong className="text-foreground">{request.quantity}</strong>
-                </span>
-                <span>
-                  {clientText(language, 'التشطيب', 'Finish')}:{' '}
-                  <strong className="text-foreground">{request.finish}</strong>
-                </span>
-                <span>
-                  {clientText(language, 'الجدول', 'Timeline')}:{' '}
-                  <strong className="text-foreground">{request.timeline}</strong>
-                </span>
-              </div>
+                <div className="mt-3.5 grid gap-2 border-t border-border/70 pt-3.5 text-xs text-muted-foreground sm:grid-cols-2">
+                  <span>
+                    {clientText(language, 'المادة', 'Material')}:{' '}
+                    <strong className="text-foreground">{request.material}</strong>
+                  </span>
+                  <span>
+                    {clientText(language, 'الكمية', 'Quantity')}:{' '}
+                    <strong className="text-foreground">{request.quantity}</strong>
+                  </span>
+                  <span>
+                    {clientText(language, 'التشطيب', 'Finish')}:{' '}
+                    <strong className="text-foreground">{request.finish}</strong>
+                  </span>
+                  <span>
+                    {clientText(language, 'الجدول', 'Timeline')}:{' '}
+                    <strong className="text-foreground">{request.timeline}</strong>
+                  </span>
+                </div>
 
-              {/* Engineering Quotation details if provided by admin */}
-              {(request.quoteAmount || request.estimatedDelivery || request.adminFeedback) && (
-                <div className="mt-3.5 border border-primary/30 bg-primary/10 p-3.5 space-y-1.5 rounded-sm">
-                  <p className="font-code text-[10px] uppercase font-bold text-primary">
-                    {clientText(language, 'تسعير وملاحظات الفريق الهندسي', 'ENGINEERING QUOTE & TIMELINE')}
-                  </p>
-                  {request.quoteAmount !== undefined && (
-                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <DollarSign className="size-3.5 text-primary" />
-                      <span>{clientText(language, 'السعر المعتمد:', 'Quoted Price:')}</span>{' '}
-                      <span className="text-primary font-mono text-sm">
-                        {request.quoteAmount} {request.quoteCurrency || 'SAR'}
-                      </span>
+                {/* Engineering Quotation details if provided by admin */}
+                {(request.quoteAmount || request.estimatedDelivery || request.adminFeedback) && (
+                  <div className="mt-3.5 border border-primary/30 bg-primary/10 p-3.5 space-y-1.5 rounded-sm">
+                    <p className="font-code text-[10px] uppercase font-bold text-primary">
+                      {clientText(language, 'تسعير وملاحظات الفريق الهندسي', 'ENGINEERING QUOTE & TIMELINE')}
                     </p>
-                  )}
-                  {request.estimatedDelivery && (
-                    <p className="text-xs text-foreground flex items-center gap-1.5">
-                      <Calendar className="size-3.5 text-primary" />
-                      <span>{clientText(language, 'الموعد التقديري للتسليم:', 'Est. Delivery:')}</span>{' '}
-                      <span className="text-accent font-semibold font-mono">
-                        {new Date(request.estimatedDelivery).toLocaleDateString(
-                          language === 'ar' ? 'ar-SA' : 'en-US',
+                    {request.quoteAmount !== undefined && (
+                      <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <DollarSign className="size-3.5 text-primary" />
+                        <span>{clientText(language, 'السعر المعتمد:', 'Quoted Price:')}</span>{' '}
+                        <span className="text-primary font-mono text-sm">
+                          {request.quoteAmount} {request.quoteCurrency || 'SAR'}
+                        </span>
+                      </p>
+                    )}
+                    {request.estimatedDelivery && (
+                      <p className="text-xs text-foreground flex items-center gap-1.5">
+                        <Calendar className="size-3.5 text-primary" />
+                        <span>{clientText(language, 'الموعد التقديري للتسليم:', 'Est. Delivery:')}</span>{' '}
+                        <span className="text-accent font-semibold font-mono">
+                          {new Date(request.estimatedDelivery).toLocaleDateString(
+                            language === 'ar' ? 'ar-SA' : 'en-US',
+                          )}
+                        </span>
+                      </p>
+                    )}
+                    {request.adminFeedback && (
+                      <p className="text-xs text-foreground/90 whitespace-pre-wrap pt-1 border-t border-primary/20">
+                        {request.adminFeedback}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Actions row for client */}
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
+                  <div className="flex items-center gap-2">
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={() => openEdit(request)}
+                        className="inline-flex items-center gap-1.5 border border-border/80 bg-secondary/30 px-3 py-1.5 font-code text-xs font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <Edit3 className="size-3.5" />
+                        <span>{clientText(language, 'تعديل الطلب', 'Edit Request')}</span>
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 font-code text-[11px] text-muted-foreground/80">
+                        <Lock className="size-3 text-muted-foreground" />
+                        <span>
+                          {request.status === 'completed'
+                            ? clientText(language, 'مكتمل (غير قابل للتعديل)', 'Completed (Locked)')
+                            : clientText(language, 'قيد المعالجة (التعديل مقفل)', 'In Review (Locked)')}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    {canDelete ? (
+                      <button
+                        type="button"
+                        onClick={() => setRequestToDelete(request)}
+                        className="inline-flex items-center gap-1 border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 font-code text-xs font-medium text-rose-400 transition-colors hover:border-rose-500 hover:bg-rose-500/20"
+                        title={clientText(language, 'حذف هذا الطلب', 'Delete this request')}
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span>{clientText(language, 'حذف', 'Delete')}</span>
+                      </button>
+                    ) : (
+                      <span
+                        className="font-code text-[10px] text-muted-foreground"
+                        title={clientText(
+                          language,
+                          'لا يمكن حذف الطلبات أثناء جدولتها للإنتاج أو التسعير',
+                          'Cannot delete orders scheduled or under production',
                         )}
+                      >
+                        {clientText(language, 'الحذف مقفل أثناء الإنتاج', 'Delete locked in production')}
                       </span>
-                    </p>
-                  )}
-                  {request.adminFeedback && (
-                    <p className="text-xs text-foreground/90 whitespace-pre-wrap pt-1 border-t border-primary/20">
-                      {request.adminFeedback}
-                    </p>
-                  )}
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Client Edit Request Modal */}
+      {editingRequest && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col border border-border bg-[#0b1528] shadow-2xl">
+            <div className="flex shrink-0 items-start justify-between border-b border-border p-5">
+              <div>
+                <span className="font-code text-[10px] tracking-widest text-primary">
+                  EDIT REQUEST / {editingRequest.reference}
+                </span>
+                <h3 className="mt-1 font-heading text-lg font-bold text-foreground">
+                  {clientText(language, 'تعديل مواصفات الطلب', 'Edit Print Request')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRequest(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                editMutation.mutate({ id: editingRequest.id, data: editForm });
+              }}
+              className="flex-1 overflow-y-auto p-5 space-y-4 text-sm"
+            >
+              {actionError && (
+                <div className="p-3 border border-rose-500/50 bg-rose-500/10 text-rose-400 text-xs">
+                  {actionError}
                 </div>
               )}
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  {clientText(language, 'اسم المشروع', 'Project Name')}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.projectName}
+                  onChange={(e) => setEditForm({ ...editForm, projectName: e.target.value })}
+                  className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground">
+                    {clientText(language, 'المادة', 'Material')}
+                  </label>
+                  <select
+                    value={editForm.material}
+                    onChange={(e) => setEditForm({ ...editForm, material: e.target.value })}
+                    className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-foreground focus:border-primary focus:outline-none"
+                  >
+                    <option value="PLA">PLA</option>
+                    <option value="PETG">PETG</option>
+                    <option value="PETG-CF">PETG-CF</option>
+                    <option value="ABS">ABS</option>
+                    <option value="ASA">ASA</option>
+                    <option value="Resin">Resin</option>
+                    <option value="Nylon">Nylon</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground">
+                    {clientText(language, 'الكمية', 'Quantity')}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    required
+                    value={editForm.quantity}
+                    onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
+                    className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-foreground focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground">
+                    {clientText(language, 'التشطيب', 'Finish')}
+                  </label>
+                  <select
+                    value={editForm.finish}
+                    onChange={(e) => setEditForm({ ...editForm, finish: e.target.value })}
+                    className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-foreground focus:border-primary focus:outline-none"
+                  >
+                    <option value="draft">Draft (سريع)</option>
+                    <option value="functional">Functional (وظيفي)</option>
+                    <option value="cosmetic">Cosmetic (جمالي فائق)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground">
+                    {clientText(language, 'الجدول الزمني', 'Timeline')}
+                  </label>
+                  <select
+                    value={editForm.timeline}
+                    onChange={(e) => setEditForm({ ...editForm, timeline: e.target.value })}
+                    className="mt-1.5 h-10 w-full border border-border bg-secondary/40 px-3 text-foreground focus:border-primary focus:outline-none"
+                  >
+                    <option value="standard">Standard (قياسي)</option>
+                    <option value="express">Express (عاجل)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  {clientText(language, 'ملاحظات إضافية', 'Additional Notes')}
+                </label>
+                <textarea
+                  rows={3}
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  placeholder={clientText(language, 'أي تفاصيل هندسية تود تحديثها...', 'Any engineering details...')}
+                  className="mt-1.5 w-full border border-border bg-secondary/40 p-3 text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingRequest(null)}
+                  className="h-10 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+                >
+                  {clientText(language, 'إلغاء', 'Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={editMutation.isPending}
+                  className="flex h-10 items-center gap-2 bg-primary px-5 font-code text-xs font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  {editMutation.isPending ? (
+                    <RefreshCw className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  <span>{clientText(language, 'حفظ التعديلات', 'Save Changes')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Client Delete Confirmation Modal */}
+      {requestToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-md border border-rose-500/40 bg-[#0b1528] p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/15 text-rose-400">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-bold text-foreground">
+                  {clientText(language, 'تأكيد حذف الطلب', 'Confirm Delete Request')}
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  {clientText(
+                    language,
+                    `هل تريد بالتأكيد حذف طلب "${requestToDelete.projectName}" (المرجع: ${requestToDelete.reference})؟`,
+                    `Are you sure you want to delete "${requestToDelete.projectName}" (${requestToDelete.reference})?`,
+                  )}
+                </p>
+                {actionError && (
+                  <p className="mt-2 text-xs text-rose-400">{actionError}</p>
+                )}
+              </div>
             </div>
-          ))}
+
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-border/60 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestToDelete(null);
+                  setActionError('');
+                }}
+                disabled={deleteMutation.isPending}
+                className="h-9 border border-border px-4 font-code text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50"
+              >
+                {clientText(language, 'إلغاء', 'Cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate(requestToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="flex h-9 items-center gap-2 border border-rose-500/60 bg-rose-600 px-4 font-code text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? (
+                  <RefreshCw className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                <span>{clientText(language, 'نعم، حذف الطلب', 'Yes, Delete')}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -292,6 +636,7 @@ export function ClientPrintingPage() {
                 requests={requests}
                 isLoading={isLoading}
                 language={language}
+                onUpdated={() => void refresh()}
               />
             </Panel>
             <Panel>

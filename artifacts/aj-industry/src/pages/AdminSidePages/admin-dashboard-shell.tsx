@@ -46,7 +46,7 @@ export interface AdminPrintRequest {
   userId: string;
   projectName: string;
   serviceSlug: string;
-  status: 'submitted' | 'reviewing' | 'quoted' | 'scheduled' | 'completed';
+  status: 'submitted' | 'reviewing' | 'quoted' | 'scheduled' | 'completed' | 'suspended';
   statusAr: string;
   statusEn: string;
   material: string;
@@ -78,7 +78,7 @@ export interface AdminConsultation {
   specialty?: string;
   providerType?: 'person' | 'company' | 'guide';
   preferredProvider?: string;
-  status: 'submitted' | 'reviewing' | 'contacted' | 'completed';
+  status: 'submitted' | 'reviewing' | 'contacted' | 'completed' | 'suspended';
   statusAr: string;
   statusEn: string;
   adminResponse?: string;
@@ -137,6 +137,7 @@ export interface AdminOverviewData {
     quoted: number;
     scheduled: number;
     completed: number;
+    suspended?: number;
   };
   consultationsBreakdown: {
     total: number;
@@ -144,6 +145,7 @@ export interface AdminOverviewData {
     reviewing: number;
     contacted: number;
     completed: number;
+    suspended?: number;
   };
   inquiriesBreakdown: {
     total: number;
@@ -182,6 +184,7 @@ export function StatusBadge({
     scheduled: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-400',
     contacted: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-400',
     completed: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400',
+    suspended: 'border-rose-500/50 bg-rose-500/15 text-rose-400',
     archived: 'border-zinc-500/40 bg-zinc-500/10 text-zinc-400',
   };
 
@@ -193,6 +196,7 @@ export function StatusBadge({
     scheduled: ['مجدول', 'Scheduled'],
     contacted: ['تم التواصل', 'Contacted'],
     completed: ['مكتمل', 'Completed'],
+    suspended: ['معلّق مؤقتاً', 'Suspended'],
     archived: ['مؤرشف', 'Archived'],
   };
 

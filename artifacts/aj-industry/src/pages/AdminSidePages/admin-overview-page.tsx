@@ -173,7 +173,7 @@ export function AdminOverviewPage({ language }: { language: Language }) {
           </Link>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[
             {
               key: 'submitted',
@@ -209,6 +209,13 @@ export function AdminOverviewPage({ language }: { language: Language }) {
               labelEn: 'Completed',
               count: printBreakdown.completed,
               color: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5',
+            },
+            {
+              key: 'suspended',
+              labelAr: 'معلّق مؤقتاً',
+              labelEn: 'Suspended',
+              count: printBreakdown.suspended || 0,
+              color: 'text-rose-400 border-rose-500/30 bg-rose-500/5',
             },
           ].map((stage) => (
             <div

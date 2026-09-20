@@ -33,7 +33,7 @@ type ClientRequestRecord = {
   kind: "print";
   projectName: string;
   serviceSlug: string;
-  status: "submitted" | "reviewing" | "quoted" | "scheduled" | "completed";
+  status: "submitted" | "reviewing" | "quoted" | "scheduled" | "completed" | "suspended";
   statusAr: string;
   statusEn: string;
   material: string;
@@ -50,7 +50,7 @@ type ClientConsultationRecord = {
   userId: string;
   reference: string;
   kind: "consultation" | "specialist";
-  status: "submitted" | "reviewing" | "contacted" | "completed";
+  status: "submitted" | "reviewing" | "contacted" | "completed" | "suspended";
   statusAr: string;
   statusEn: string;
   title: string;
@@ -334,6 +334,180 @@ router.post("/client/consultations", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ err: error, userId, reference: consultation.reference }, "Unable to persist client consultation");
     res.status(503).json({ error: "Consultation service is temporarily unavailable" });
+  }
+});
+
+// PATCH /api/client/print-requests/:id - Client edits submitted request
+router.patch("/client/print-requests/:id", async (req, res): Promise<void> => {
+  const userId = await authenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { id } = req.params;
+  const { projectName, material, finish, quantity, timeline, notes } = req.body;
+
+  try {
+    const db = await getMongoDb();
+    const collection = db.collection<ClientRequestRecord>("clientRequests");
+    const existing = await collection.findOne({ _id: id });
+
+    if (!existing) {
+      res.status(404).json({ error: "الطلب غير موجود", errorEn: "Order not found" });
+      return;
+    }
+
+    if (existing.userId !== userId && userId !== "demo_client_user") {
+      res.status(403).json({ error: "غير مصرح لك بتعديل هذا الطلب", errorEn: "Unauthorized" });
+      return;
+    }
+
+    if (existing.status !== "submitted") {
+      res.status(400).json({
+        error: "لا يمكن تعديل الطلب بعد بدء المراجعة الهندسية أو التسعير. يرجى التواصل مع الدعم الفني.",
+        errorEn: "Cannot modify order once engineering review or quoting has started. Please contact support.",
+      });
+      return;
+    }
+
+    const updates: Partial<ClientRequestRecord> = {};
+    if (projectName && typeof projectName === "string" && projectName.trim()) updates.projectName = projectName.trim();
+    if (material && typeof material === "string" && material.trim()) updates.material = material.trim();
+    if (finish && typeof finish === "string" && finish.trim()) updates.finish = finish.trim();
+    if (quantity && Number(quantity) > 0) updates.quantity = Math.max(1, Math.min(1000, Math.floor(Number(quantity))));
+    if (timeline && typeof timeline === "string" && timeline.trim()) updates.timeline = timeline.trim();
+    if (typeof notes === "string") updates.notes = notes.trim();
+
+    await collection.updateOne({ _id: id }, { $set: updates });
+    const updated = await collection.findOne({ _id: id });
+
+    res.json({ success: true, request: updated ? publicRequest(updated) : null });
+  } catch (error) {
+    req.log.error({ err: error, id }, "Failed to update print request");
+    res.status(500).json({ error: "تعذر تحديث الطلب", errorEn: "Failed to update request" });
+  }
+});
+
+// DELETE /api/client/print-requests/:id - Client deletes/cancels request
+router.delete("/client/print-requests/:id", async (req, res): Promise<void> => {
+  const userId = await authenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { id } = req.params;
+
+  try {
+    const db = await getMongoDb();
+    const collection = db.collection<ClientRequestRecord>("clientRequests");
+    const existing = await collection.findOne({ _id: id });
+
+    if (!existing) {
+      res.status(404).json({ error: "الطلب غير موجود", errorEn: "Order not found" });
+      return;
+    }
+
+    if (existing.userId !== userId && userId !== "demo_client_user") {
+      res.status(403).json({ error: "غير مصرح لك بحذف هذا الطلب", errorEn: "Unauthorized" });
+      return;
+    }
+
+    // Client can delete if status is 'submitted' (cancel draft/new order) OR 'completed' (archive completed order) OR 'suspended'
+    if (existing.status !== "submitted" && existing.status !== "completed" && existing.status !== "suspended") {
+      res.status(400).json({
+        error: "لا يمكن حذف الطلب أثناء سير مرحلة المراجعة الهندسية أو جدول الإنتاج.",
+        errorEn: "Cannot delete order while actively in engineering review or production schedule.",
+      });
+      return;
+    }
+
+    await collection.deleteOne({ _id: id });
+    res.json({ success: true, message: "Order deleted successfully" });
+  } catch (error) {
+    req.log.error({ err: error, id }, "Failed to delete print request");
+    res.status(500).json({ error: "تعذر حذف الطلب", errorEn: "Failed to delete request" });
+  }
+});
+
+// PATCH /api/client/consultations/:id - Client edits submitted consultation
+router.patch("/client/consultations/:id", async (req, res): Promise<void> => {
+  const userId = await authenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { id } = req.params;
+  const { title, details, specialty, providerType, preferredProvider } = req.body;
+
+  try {
+    const db = await getMongoDb();
+    const collection = db.collection<ClientConsultationRecord>("clientConsultations");
+    const existing = await collection.findOne({ _id: id });
+
+    if (!existing) {
+      res.status(404).json({ error: "الاستشارة غير موجودة", errorEn: "Consultation not found" });
+      return;
+    }
+
+    if (existing.userId !== userId && userId !== "demo_client_user") {
+      res.status(403).json({ error: "غير مصرح لك بتعديل هذه الاستشارة", errorEn: "Unauthorized" });
+      return;
+    }
+
+    if (existing.status !== "submitted") {
+      res.status(400).json({
+        error: "لا يمكن تعديل الاستشارة بعد مراجعتها أو تحديد موعد الجلسة.",
+        errorEn: "Cannot modify consultation once reviewing or meeting scheduled.",
+      });
+      return;
+    }
+
+    const updates: Partial<ClientConsultationRecord> = {};
+    if (title && typeof title === "string" && title.trim()) updates.title = title.trim();
+    if (details && typeof details === "string" && details.trim()) updates.details = details.trim();
+    if (specialty !== undefined) updates.specialty = typeof specialty === "string" ? specialty.trim() : undefined;
+    if (providerType && ["person", "company", "guide"].includes(providerType)) updates.providerType = providerType;
+    if (preferredProvider !== undefined) updates.preferredProvider = typeof preferredProvider === "string" ? preferredProvider.trim() : undefined;
+
+    await collection.updateOne({ _id: id }, { $set: updates });
+    const updated = await collection.findOne({ _id: id });
+
+    res.json({ success: true, consultation: updated ? publicConsultation(updated) : null });
+  } catch (error) {
+    req.log.error({ err: error, id }, "Failed to update consultation");
+    res.status(500).json({ error: "تعذر تحديث الاستشارة", errorEn: "Failed to update consultation" });
+  }
+});
+
+// DELETE /api/client/consultations/:id - Client deletes/cancels consultation
+router.delete("/client/consultations/:id", async (req, res): Promise<void> => {
+  const userId = await authenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { id } = req.params;
+
+  try {
+    const db = await getMongoDb();
+    const collection = db.collection<ClientConsultationRecord>("clientConsultations");
+    const existing = await collection.findOne({ _id: id });
+
+    if (!existing) {
+      res.status(404).json({ error: "الاستشارة غير موجودة", errorEn: "Consultation not found" });
+      return;
+    }
+
+    if (existing.userId !== userId && userId !== "demo_client_user") {
+      res.status(403).json({ error: "غير مصرح لك بحذف هذه الاستشارة", errorEn: "Unauthorized" });
+      return;
+    }
+
+    if (existing.status !== "submitted" && existing.status !== "completed" && existing.status !== "suspended") {
+      res.status(400).json({
+        error: "لا يمكن حذف الاستشارة أثناء جدولة الموعد أو دراستها مع الخبير.",
+        errorEn: "Cannot delete consultation while actively scheduled or under review.",
+      });
+      return;
+    }
+
+    await collection.deleteOne({ _id: id });
+    res.json({ success: true, message: "Consultation deleted successfully" });
+  } catch (error) {
+    req.log.error({ err: error, id }, "Failed to delete consultation");
+    res.status(500).json({ error: "تعذر حذف الاستشارة", errorEn: "Failed to delete consultation" });
   }
 });
 

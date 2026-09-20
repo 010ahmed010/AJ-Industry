@@ -385,7 +385,7 @@ components:
           type: string
         status:
           type: string
-          enum: [submitted, reviewing, quoted, scheduled, completed]
+          enum: [submitted, reviewing, quoted, scheduled, completed, suspended]
         statusAr:
           type: string
         statusEn:
@@ -458,7 +458,7 @@ components:
           enum: [consultation, specialist]
         status:
           type: string
-          enum: [submitted, reviewing, contacted, completed]
+          enum: [submitted, reviewing, contacted, completed, suspended]
         statusAr:
           type: string
         statusEn:

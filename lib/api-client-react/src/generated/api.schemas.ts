@@ -47,6 +47,7 @@ export const ClientRequestStatus = {
   quoted: 'quoted',
   scheduled: 'scheduled',
   completed: 'completed',
+  suspended: 'suspended',
 } as const;
 
 export interface ClientRequest {
@@ -120,6 +121,7 @@ export const ClientConsultationStatus = {
   reviewing: 'reviewing',
   contacted: 'contacted',
   completed: 'completed',
+  suspended: 'suspended',
 } as const;
 
 export type ClientConsultationProviderType = typeof ClientConsultationProviderType[keyof typeof ClientConsultationProviderType];

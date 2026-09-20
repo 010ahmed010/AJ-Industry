@@ -19,6 +19,7 @@ const statusLabels: Record<string, { ar: string; en: string }> = {
   scheduled: { ar: "مجدول للإنتاج", en: "Scheduled for production" },
   completed: { ar: "مكتمل وجاهز للتسليم", en: "Completed" },
   contacted: { ar: "تم التواصل وتحديد الموعد", en: "Contacted" },
+  suspended: { ar: "معلّق مؤقتاً", en: "Suspended" },
   new: { ar: "جديد", en: "New" },
   archived: { ar: "مؤرشف", en: "Archived" },
 };
@@ -67,6 +68,7 @@ router.get("/admin/overview", async (req: Request, res: Response): Promise<void>
       quoted: allRequests.filter((r) => r.status === "quoted").length,
       scheduled: allRequests.filter((r) => r.status === "scheduled").length,
       completed: allRequests.filter((r) => r.status === "completed").length,
+      suspended: allRequests.filter((r) => r.status === "suspended").length,
     };
 
     const consultationsBreakdown = {
@@ -75,6 +77,7 @@ router.get("/admin/overview", async (req: Request, res: Response): Promise<void>
       reviewing: allConsultations.filter((c) => c.status === "reviewing").length,
       contacted: allConsultations.filter((c) => c.status === "contacted").length,
       completed: allConsultations.filter((c) => c.status === "completed").length,
+      suspended: allConsultations.filter((c) => c.status === "suspended").length,
     };
 
     const inquiriesBreakdown = {
@@ -274,6 +277,28 @@ router.patch("/admin/requests/:id", async (req: Request, res: Response): Promise
   }
 });
 
+// DELETE /api/admin/requests/:id - Permanently delete request
+router.delete("/admin/requests/:id", async (req: Request, res: Response): Promise<void> => {
+  if (!checkAdminAccess(req)) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  const { id } = req.params;
+  try {
+    const db = await getMongoDb();
+    const requestsColl = db.collection("clientRequests");
+    const result = await requestsColl.deleteOne({ _id: id });
+    if (result.deletedCount === 0) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+    res.json({ success: true, message: "Print request permanently deleted" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to delete request", details: err?.message });
+  }
+});
+
 // GET /api/admin/consultations - List all consultations with client details
 router.get("/admin/consultations", async (req: Request, res: Response): Promise<void> => {
   if (!checkAdminAccess(req)) {
@@ -371,6 +396,28 @@ router.patch("/admin/consultations/:id", async (req: Request, res: Response): Pr
     });
   } catch (err: any) {
     res.status(500).json({ error: "Failed to update consultation", details: err?.message });
+  }
+});
+
+// DELETE /api/admin/consultations/:id - Permanently delete consultation
+router.delete("/admin/consultations/:id", async (req: Request, res: Response): Promise<void> => {
+  if (!checkAdminAccess(req)) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  const { id } = req.params;
+  try {
+    const db = await getMongoDb();
+    const consultationsColl = db.collection("clientConsultations");
+    const result = await consultationsColl.deleteOne({ _id: id });
+    if (result.deletedCount === 0) {
+      res.status(404).json({ error: "Consultation not found" });
+      return;
+    }
+    res.json({ success: true, message: "Consultation permanently deleted" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to delete consultation", details: err?.message });
   }
 });
 
