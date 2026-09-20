@@ -492,6 +492,182 @@ router.get("/admin/clients", async (req: Request, res: Response): Promise<void> 
   }
 });
 
+// DELETE /api/admin/clients/:userId - Completely delete client credentials from MongoDB and Clerk
+router.delete(["/admin/clients/:userId", "/api/admin/clients/:userId"], async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(403).json({ error: "Admin authorization required" });
+    return;
+  }
+
+  const { userId } = req.params;
+  if (!userId || typeof userId !== "string") {
+    res.status(400).json({ error: "Client user ID is required" });
+    return;
+  }
+
+  try {
+    const db = await getMongoDb();
+    const profilesColl = db.collection("clientProfiles");
+    const usersColl = db.collection("users");
+    const sessionsColl = db.collection("sessions");
+    const requestsColl = db.collection("clientRequests");
+    const consultationsColl = db.collection("clientConsultations");
+
+    // Look up client in profiles and users
+    const [profile, user] = await Promise.all([
+      profilesColl.findOne({ $or: [{ userId }, { _id: userId }] }),
+      usersColl.findOne({ $or: [{ _id: userId }, { clerkId: userId }] }),
+    ]);
+
+    const targetEmail = (profile?.email || user?.email || "").toLowerCase().trim();
+    const targetName = profile?.name || user?.name || "";
+
+    // Safeguard: strictly protect system administrator accounts
+    if (
+      userId === "admin_super_user" ||
+      user?.role === "admin" ||
+      targetEmail === "admin@aj-industry.com" ||
+      targetName.includes("المهندس المسؤول") ||
+      targetName.includes("المدير")
+    ) {
+      res.status(403).json({
+        error: "حساب الإدارة محمي ولا يمكن حذفه / Cannot delete administrator account",
+      });
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // Step 1: Delete client account & credentials from Clerk
+    // -------------------------------------------------------------
+    const clerkStatus = {
+      attempted: false,
+      deleted: false,
+      clerkUserId: null as string | null,
+      message: "",
+    };
+
+    if (process.env.CLERK_SECRET_KEY) {
+      clerkStatus.attempted = true;
+      try {
+        const { clerkClient } = await import("@clerk/express");
+
+        let resolvedClerkId: string | null = null;
+        if (userId.startsWith("user_")) {
+          resolvedClerkId = userId;
+        } else if (user?.clerkId && typeof user.clerkId === "string" && user.clerkId.startsWith("user_")) {
+          resolvedClerkId = user.clerkId;
+        } else if (targetEmail) {
+          try {
+            const clerkUsers = await clerkClient.users.getUserList({
+              emailAddress: [targetEmail],
+            });
+            if (clerkUsers.data && clerkUsers.data.length > 0) {
+              resolvedClerkId = clerkUsers.data[0].id;
+            }
+          } catch (lookupErr: any) {
+            console.warn("Clerk email lookup note:", lookupErr?.message);
+          }
+        }
+
+        if (resolvedClerkId) {
+          await clerkClient.users.deleteUser(resolvedClerkId);
+          clerkStatus.deleted = true;
+          clerkStatus.clerkUserId = resolvedClerkId;
+          clerkStatus.message = `Successfully deleted Clerk user (${resolvedClerkId})`;
+        } else {
+          try {
+            await clerkClient.users.deleteUser(userId);
+            clerkStatus.deleted = true;
+            clerkStatus.clerkUserId = userId;
+            clerkStatus.message = `Deleted user (${userId}) from Clerk`;
+          } catch (directErr: any) {
+            clerkStatus.message = `Client was not found in Clerk or was a local profile: ${directErr?.message || "Not found"}`;
+          }
+        }
+      } catch (clerkErr: any) {
+        console.warn("Clerk deletion error:", clerkErr?.message);
+        clerkStatus.message = clerkErr?.message || "Failed to remove user from Clerk";
+      }
+    } else {
+      clerkStatus.message = "CLERK_SECRET_KEY not set; Clerk API call bypassed";
+    }
+
+    // -------------------------------------------------------------
+    // Step 2: Delete client credentials & data from MongoDB
+    // -------------------------------------------------------------
+    const deleteAssociated = req.query.deleteAssociated !== "false" && req.body?.deleteAssociated !== false;
+
+    // Delete client profiles
+    const profileDelete = await profilesColl.deleteMany({
+      $or: [
+        { userId },
+        { _id: userId },
+        ...(targetEmail ? [{ email: targetEmail }] : []),
+      ],
+    });
+
+    // Delete user credentials from users collection
+    const userDelete = await usersColl.deleteMany({
+      $or: [
+        { _id: userId },
+        { clerkId: userId },
+        ...(targetEmail ? [{ email: targetEmail }] : []),
+      ],
+    });
+
+    // Delete active sessions
+    const sessionDelete = await sessionsColl.deleteMany({
+      $or: [
+        { userId },
+        ...(targetEmail ? [{ email: targetEmail }] : []),
+      ],
+    });
+
+    // Delete associated engineering requests and consultations if enabled
+    let requestsDeleted = 0;
+    let consultationsDeleted = 0;
+    if (deleteAssociated) {
+      const [reqDel, consDel] = await Promise.all([
+        requestsColl.deleteMany({
+          $or: [
+            { userId },
+            ...(targetEmail ? [{ clientEmail: targetEmail }] : []),
+          ],
+        }),
+        consultationsColl.deleteMany({
+          $or: [
+            { userId },
+            ...(targetEmail ? [{ clientEmail: targetEmail }] : []),
+          ],
+        }),
+      ]);
+      requestsDeleted = reqDel.deletedCount || 0;
+      consultationsDeleted = consDel.deletedCount || 0;
+    }
+
+    res.json({
+      success: true,
+      message: "Client account deleted successfully from MongoDB and Clerk",
+      messageAr: "تم حذف حساب العميل وبيانات اعتماده بنجاح من MongoDB و Clerk",
+      deletedUserId: userId,
+      clerk: clerkStatus,
+      mongodb: {
+        profilesDeleted: profileDelete.deletedCount || 0,
+        usersDeleted: userDelete.deletedCount || 0,
+        sessionsDeleted: sessionDelete.deletedCount || 0,
+        requestsDeleted,
+        consultationsDeleted,
+      },
+    });
+  } catch (err: any) {
+    req.log?.error?.({ err, userId }, "Failed to delete client account");
+    res.status(500).json({
+      error: "فشل حذف حساب العميل من قاعدة البيانات / Failed to delete client account",
+      details: err?.message,
+    });
+  }
+});
+
 // ==========================================
 // Service Management Endpoints (Admin)
 // ==========================================
