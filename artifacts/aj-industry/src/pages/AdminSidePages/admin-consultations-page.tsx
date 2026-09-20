@@ -28,6 +28,7 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedConsultation, setSelectedConsultation] = useState<AdminConsultation | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Edit fields
   const [editStatus, setEditStatus] = useState<AdminConsultation['status']>('submitted');
@@ -43,6 +44,20 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
       return customFetch<AdminConsultation[]>(`/api/admin/consultations?${params.toString()}`);
     },
     refetchInterval: 8_000,
+  });
+
+  const filteredConsultations = consultations.filter((c) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      c.title?.toLowerCase().includes(q) ||
+      c.reference?.toLowerCase().includes(q) ||
+      c.client?.name?.toLowerCase().includes(q) ||
+      c.client?.company?.toLowerCase().includes(q) ||
+      c.client?.email?.toLowerCase().includes(q) ||
+      c.details?.toLowerCase().includes(q) ||
+      c.assignedSpecialist?.toLowerCase().includes(q)
+    );
   });
 
   const updateMutation = useMutation({
@@ -145,10 +160,39 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
 
       {/* Consultations List */}
       <div className="border border-border bg-[#0b1528]">
-        <div className="border-b border-border/80 px-6 py-4">
-          <p className="font-code text-xs text-muted-foreground">
-            {consultations.length} {adminText(language, 'استشارة مسجلة', 'consultations registered')}
-          </p>
+        <div className="border-b border-border/80 px-6 py-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="inline-block size-2 rounded-full bg-primary" />
+            <p className="font-code text-xs text-muted-foreground">
+              {filteredConsultations.length} / {consultations.length}{' '}
+              {adminText(language, 'استشارة مسجلة', 'consultations registered')}
+            </p>
+          </div>
+
+          <div className="relative w-full sm:w-80">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={adminText(
+                language,
+                'البحث بالمرجع، العنوان، العميل، أو المتخصص...',
+                'Search reference, title, client, or specialist...',
+              )}
+              className="h-9 w-full rounded border border-border/80 bg-[#101f37] pl-3 pr-8 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+            <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                title="مسح"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -169,9 +213,23 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
               )}
             </p>
           </div>
+        ) : filteredConsultations.length === 0 ? (
+          <div className="p-12 text-center">
+            <Search className="mx-auto size-7 text-muted-foreground/40" />
+            <p className="mt-3 font-display text-sm font-bold text-foreground">
+              {adminText(language, 'لا توجد استشارات مطابقة لبحثك', 'No consultations match your search')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="mt-2 text-xs text-primary underline hover:text-primary/80"
+            >
+              {adminText(language, 'إلغاء تصفية البحث', 'Clear search filter')}
+            </button>
+          </div>
         ) : (
-          <div className="divide-y divide-border/60">
-            {consultations.map((c) => (
+          <div className="divide-y divide-border/60 max-h-[600px] overflow-y-auto overscroll-contain">
+            {filteredConsultations.map((c) => (
               <div
                 key={c.id}
                 className="flex flex-col gap-4 p-5 transition-colors hover:bg-secondary/20 lg:flex-row lg:items-center lg:justify-between"

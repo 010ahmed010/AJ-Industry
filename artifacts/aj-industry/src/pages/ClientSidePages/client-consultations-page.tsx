@@ -7,7 +7,7 @@ import {
   type ClientConsultation,
   type ClientConsultationInputProviderType,
 } from '@workspace/api-client-react';
-import { BookOpen, Building2, CircleCheck, Clock3, MessageCircle, Send, UserRound } from 'lucide-react';
+import { BookOpen, Building2, CircleCheck, Clock3, MessageCircle, Search, Send, UserRound, X } from 'lucide-react';
 import { clientText, ClientDataError, PageIntro, Panel, PanelHeader, Tag, useClientDashboard } from './client-dashboard-shell';
 
 type SpecialistForm = {
@@ -56,55 +56,143 @@ function RequestSuccess({ reference, language }: { reference: string; language: 
 }
 
 function ConsultationHistory({ consultations, language }: { consultations: ClientConsultation[]; language: 'ar' | 'en' }) {
-  if (consultations.length === 0) {
-    return <div className="p-6 text-sm leading-7 text-muted-foreground">{clientText(language, 'لا توجد طلبات استشارة بعد. أرسل طلبك الأول من الأقسام أعلاه.', 'No consultation requests yet. Send your first request from the sections above.')}</div>;
-  }
-  return <div className="divide-y divide-border/70">
-    {consultations.map((consultation) => {
-      const c = consultation as any;
-      return (
-        <div key={consultation.id} className="flex flex-col gap-3 p-5 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Tag tone={consultation.status === 'completed' ? 'green' : consultation.status === 'submitted' ? 'amber' : 'blue'}>{statusLabel(language, consultation)}</Tag>
-                <span className="font-code text-[9px] text-muted-foreground">{consultation.reference}</span>
-              </div>
-              <p className="mt-3 font-display text-lg font-bold">{consultation.title}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{kindLabel(language, consultation.kind)}{consultation.specialty ? ` · ${consultation.specialty}` : ''}</p>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">{consultation.details}</p>
-            </div>
-            <span className="flex shrink-0 items-center gap-2 font-code text-[9px] text-muted-foreground"><Clock3 className="size-3.5" />{new Date(consultation.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}</span>
-          </div>
+  const [searchQuery, setSearchQuery] = useState('');
 
-          {(c.adminResponse || c.assignedSpecialist || c.meetingScheduledAt) && (
-            <div className="mt-3 border border-primary/30 bg-primary/10 p-4 space-y-2">
-              <p className="font-code text-[10px] uppercase text-primary font-bold">
-                {clientText(language, 'رد ومتابعة الفريق الهندسي', 'ENGINEERING TEAM RESPONSE')}
-              </p>
-              {c.assignedSpecialist && (
-                <p className="text-xs text-foreground font-semibold">
-                  {clientText(language, 'المهندس المسؤول:', 'Assigned Specialist:')}{' '}
-                  <span className="text-primary">{c.assignedSpecialist}</span>
-                </p>
-              )}
-              {c.meetingScheduledAt && (
-                <p className="text-xs text-foreground">
-                  {clientText(language, 'موعد الجلسة الاستشارية:', 'Scheduled Meeting:')}{' '}
-                  <span className="text-accent font-semibold">{new Date(c.meetingScheduledAt).toLocaleString()}</span>
-                </p>
-              )}
-              {c.adminResponse && (
-                <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap">
-                  {c.adminResponse}
-                </p>
-              )}
-            </div>
-          )}
+  if (consultations.length === 0) {
+    return (
+      <div className="p-6 text-sm leading-7 text-muted-foreground">
+        {clientText(
+          language,
+          'لا توجد طلبات استشارة بعد. أرسل طلبك الأول من الأقسام أعلاه.',
+          'No consultation requests yet. Send your first request from the sections above.',
+        )}
+      </div>
+    );
+  }
+
+  const filtered = consultations.filter((c) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      c.title?.toLowerCase().includes(q) ||
+      c.reference?.toLowerCase().includes(q) ||
+      c.details?.toLowerCase().includes(q) ||
+      c.specialty?.toLowerCase().includes(q) ||
+      (c as any).assignedSpecialist?.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div>
+      {/* Search and stats bar */}
+      <div className="flex flex-col gap-2.5 border-b border-border/80 bg-secondary/10 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-block size-2 rounded-full bg-primary" />
+          <span className="font-code text-xs text-muted-foreground">
+            {filtered.length} / {consultations.length}{' '}
+            {clientText(language, 'طلب استشارة محفوظ', 'saved consultation requests')}
+          </span>
         </div>
-      );
-    })}
-  </div>;
+
+        {(consultations.length > 2 || searchQuery) && (
+          <div className="relative w-full sm:w-72">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={clientText(language, 'البحث بالمرجع، العنوان، أو المجال...', 'Search ref, title, specialty...')}
+              className="h-8.5 w-full rounded border border-border/80 bg-background/80 pl-3 pr-8 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+            <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                title="مسح"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="p-8 text-center text-xs text-muted-foreground">
+          <p className="font-semibold text-foreground">
+            {clientText(language, 'لا توجد نتائج مطابقة لبحثك.', 'No requests match your search.')}
+          </p>
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="mt-2 text-primary underline hover:text-primary/80"
+          >
+            {clientText(language, 'إعادة تعيين البحث', 'Reset search')}
+          </button>
+        </div>
+      ) : (
+        <div className="divide-y divide-border/70 max-h-[540px] overflow-y-auto overscroll-contain">
+          {filtered.map((consultation) => {
+            const c = consultation as any;
+            return (
+              <div key={consultation.id} className="flex flex-col gap-3 p-5 sm:p-6 transition-colors hover:bg-secondary/15">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Tag tone={consultation.status === 'completed' ? 'green' : consultation.status === 'submitted' ? 'amber' : 'blue'}>
+                        {statusLabel(language, consultation)}
+                      </Tag>
+                      <span className="font-code text-[9px] text-muted-foreground font-semibold">
+                        {consultation.reference}
+                      </span>
+                    </div>
+                    <p className="mt-2 font-display text-lg font-bold">{consultation.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {kindLabel(language, consultation.kind)}
+                      {consultation.specialty ? ` · ${consultation.specialty}` : ''}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground whitespace-pre-line">
+                      {consultation.details}
+                    </p>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-2 font-code text-[9px] text-muted-foreground">
+                    <Clock3 className="size-3.5" />
+                    {new Date(consultation.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
+                  </span>
+                </div>
+
+                {(c.adminResponse || c.assignedSpecialist || c.meetingScheduledAt) && (
+                  <div className="mt-3 border border-primary/30 bg-primary/10 p-4 space-y-2">
+                    <p className="font-code text-[10px] uppercase text-primary font-bold">
+                      {clientText(language, 'رد ومتابعة الفريق الهندسي', 'ENGINEERING TEAM RESPONSE')}
+                    </p>
+                    {c.assignedSpecialist && (
+                      <p className="text-xs text-foreground font-semibold">
+                        {clientText(language, 'المهندس المسؤول:', 'Assigned Specialist:')}{' '}
+                        <span className="text-primary">{c.assignedSpecialist}</span>
+                      </p>
+                    )}
+                    {c.meetingScheduledAt && (
+                      <p className="text-xs text-foreground">
+                        {clientText(language, 'موعد الجلسة الاستشارية:', 'Scheduled Meeting:')}{' '}
+                        <span className="text-accent font-semibold">{new Date(c.meetingScheduledAt).toLocaleString()}</span>
+                      </p>
+                    )}
+                    {c.adminResponse && (
+                      <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap">
+                        {c.adminResponse}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ClientConsultationsPage() {

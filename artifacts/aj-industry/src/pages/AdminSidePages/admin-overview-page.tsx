@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { customFetch } from '@workspace/api-client-react';
@@ -12,8 +13,10 @@ import {
   MessageSquare,
   Printer,
   RefreshCw,
+  Search,
   TrendingUp,
   Users,
+  X,
 } from 'lucide-react';
 import {
   adminText,
@@ -25,6 +28,8 @@ import {
 
 export function AdminOverviewPage({ language }: { language: Language }) {
   const queryClient = useQueryClient();
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityFilter, setActivityFilter] = useState<'all' | 'print' | 'consultation' | 'inquiry'>('all');
 
   const { data, isLoading, isFetching, error, refetch } = useQuery<AdminOverviewData>({
     queryKey: ['admin-overview'],
@@ -49,6 +54,21 @@ export function AdminOverviewPage({ language }: { language: Language }) {
     scheduled: 0,
     completed: 0,
   };
+
+  const activities = data?.activities || [];
+  const filteredActivities = activities.filter((item) => {
+    if (activityFilter !== 'all' && item.kind !== activityFilter) return false;
+    if (!activitySearch.trim()) return true;
+    const q = activitySearch.toLowerCase().trim();
+    return (
+      item.title?.toLowerCase().includes(q) ||
+      item.reference?.toLowerCase().includes(q) ||
+      item.subtitle?.toLowerCase().includes(q) ||
+      item.status?.toLowerCase().includes(q) ||
+      item.statusAr?.toLowerCase().includes(q) ||
+      item.statusEn?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-8">
@@ -210,21 +230,78 @@ export function AdminOverviewPage({ language }: { language: Language }) {
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         {/* Activity Stream */}
         <div className="border border-border bg-[#0b1528]">
-          <div className="flex items-center justify-between border-b border-border/80 p-5">
-            <div>
-              <p className="font-code text-[10px] tracking-[.18em] text-primary">
-                FEED / REAL-TIME ACTIVITY
-              </p>
-              <h3 className="mt-1 font-display text-base font-bold text-foreground">
-                {adminText(language, 'آخر الأحداث والطلبات الواردة', 'Recent Incoming Activity')}
-              </h3>
+          <div className="border-b border-border/80 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-code text-[10px] tracking-[.18em] text-primary">
+                  FEED / REAL-TIME ACTIVITY
+                </p>
+                <h3 className="mt-1 font-display text-base font-bold text-foreground">
+                  {adminText(language, 'آخر الأحداث والطلبات الواردة', 'Recent Incoming Activity')}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-code text-xs text-muted-foreground">
+                  {filteredActivities.length} / {activities.length}{' '}
+                  {adminText(language, 'نشاط', 'records')}
+                </span>
+              </div>
             </div>
-            <span className="font-code text-[10px] text-muted-foreground">
-              {data?.activities?.length ?? 0} {adminText(language, 'نشاط', 'records')}
-            </span>
+
+            {/* Search and Category Filter Controls */}
+            <div className="mt-3.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 max-w-sm">
+                <input
+                  type="text"
+                  value={activitySearch}
+                  onChange={(e) => setActivitySearch(e.target.value)}
+                  placeholder={adminText(
+                    language,
+                    'البحث بالمرجع، العنوان، أو الحالة...',
+                    'Search reference, title, status...',
+                  )}
+                  className="h-8.5 w-full rounded border border-border/80 bg-[#101f37] pl-3 pr-8 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+                <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                {activitySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setActivitySearch('')}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    title="مسح"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 font-code text-[11px]">
+                {(['all', 'print', 'consultation', 'inquiry'] as const).map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => setActivityFilter(kind)}
+                    className={`px-2.5 py-1 rounded transition-colors ${
+                      activityFilter === kind
+                        ? 'bg-primary text-primary-foreground font-semibold'
+                        : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {kind === 'all'
+                      ? adminText(language, 'الكل', 'All')
+                      : kind === 'print'
+                      ? adminText(language, 'الطباعة', 'Print')
+                      : kind === 'consultation'
+                      ? adminText(language, 'الاستشارات', 'Consult')
+                      : adminText(language, 'الرسائل', 'Inquiries')}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="divide-y divide-border/60">
+          <div className="divide-y divide-border/60 max-h-[480px] overflow-y-auto overscroll-contain">
             {isLoading ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 {adminText(language, 'جارٍ تحميل الأنشطة…', 'Loading activity stream…')}
@@ -233,8 +310,23 @@ export function AdminOverviewPage({ language }: { language: Language }) {
               <div className="p-8 text-center text-sm text-muted-foreground">
                 {adminText(language, 'لا توجد طلبات واردة بعد.', 'No incoming activities yet.')}
               </div>
+            ) : filteredActivities.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                <Search className="mx-auto size-6 text-muted-foreground/40 mb-2" />
+                <p>{adminText(language, 'لا توجد أنشطة تطابق بحثك.', 'No activity matches your search.')}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActivitySearch('');
+                    setActivityFilter('all');
+                  }}
+                  className="mt-2 text-xs text-primary underline hover:text-primary/80"
+                >
+                  {adminText(language, 'إعادة ضبط التصفية', 'Reset filter')}
+                </button>
+              </div>
             ) : (
-              data.activities.map((item) => (
+              filteredActivities.map((item) => (
                 <div
                   key={`${item.kind}-${item.id}`}
                   className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-secondary/20"
