@@ -1,19 +1,231 @@
 import { type FormEvent, useState } from 'react';
 import { useCreateClientPrintRequest, getGetClientOverviewQueryKey } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, CircleCheck, Info, Package, Printer, Send, Timer } from 'lucide-react';
-import { clientText, ClientDataError, PageIntro, Panel, PanelHeader, Tag, useClientDashboard } from './client-dashboard-shell';
+import {
+  Calendar,
+  Check,
+  CircleCheck,
+  DollarSign,
+  Info,
+  Package,
+  Printer,
+  Search,
+  Send,
+  Timer,
+  X,
+} from 'lucide-react';
+import {
+  clientText,
+  ClientDataError,
+  PageIntro,
+  Panel,
+  PanelHeader,
+  Tag,
+  useClientDashboard,
+  type ClientRequest,
+} from './client-dashboard-shell';
 
 type PrintForm = { projectName: string; material: string; finish: string; quantity: string; timeline: string; notes: string };
 const initialForm: PrintForm = { projectName: '', material: 'PETG-CF', finish: 'functional', quantity: '1', timeline: 'standard', notes: '' };
 
 function requestStatus(language: 'ar' | 'en', status: string) {
-  const labels: Record<string, [string, string]> = { submitted: ['تم الاستلام', 'Received'], reviewing: ['قيد المراجعة', 'Under review'], quoted: ['تم التسعير', 'Quoted'], scheduled: ['مجدول', 'Scheduled'], completed: ['مكتمل', 'Completed'] };
+  const labels: Record<string, [string, string]> = {
+    submitted: ['تم الاستلام', 'Received'],
+    reviewing: ['قيد المراجعة', 'Under review'],
+    quoted: ['تم التسعير', 'Quoted'],
+    scheduled: ['مجدول', 'Scheduled'],
+    completed: ['مكتمل', 'Completed'],
+  };
   return labels[status]?.[language === 'ar' ? 0 : 1] ?? status;
 }
 
+function SavedPrintRequests({
+  requests,
+  isLoading,
+  language,
+}: {
+  requests: ClientRequest[];
+  isLoading: boolean;
+  language: 'ar' | 'en';
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  if (isLoading) {
+    return (
+      <p className="p-6 text-sm text-muted-foreground">
+        {clientText(language, 'جارٍ التحميل…', 'Loading…')}
+      </p>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="p-6 text-sm leading-7 text-muted-foreground">
+        {clientText(
+          language,
+          'لم ترسل طلبات بعد. استخدم النموذج لإرسال أول طلب.',
+          'You have not sent any requests yet. Use the form to send your first one.',
+        )}
+      </div>
+    );
+  }
+
+  const filteredRequests = requests.filter((r) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      r.projectName?.toLowerCase().includes(q) ||
+      r.reference?.toLowerCase().includes(q) ||
+      r.material?.toLowerCase().includes(q) ||
+      r.notes?.toLowerCase().includes(q) ||
+      r.status?.toLowerCase().includes(q) ||
+      r.statusAr?.toLowerCase().includes(q) ||
+      r.statusEn?.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div>
+      {/* Search & Count Subheader */}
+      <div className="flex flex-col gap-2.5 border-b border-border/80 bg-secondary/10 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-block size-2 rounded-full bg-primary" />
+          <span className="font-code text-xs text-muted-foreground">
+            {filteredRequests.length} / {requests.length}{' '}
+            {clientText(language, 'طلب محفوظ', 'saved requests')}
+          </span>
+        </div>
+
+        {(requests.length > 2 || searchQuery) && (
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={clientText(
+                language,
+                'البحث بالمرجع أو اسم المشروع…',
+                'Search project, ref, material…',
+              )}
+              className="h-8.5 w-full rounded border border-border/80 bg-background/80 pl-3 pr-8 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+            <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                title="مسح"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bounded Scrollable List */}
+      {filteredRequests.length === 0 ? (
+        <div className="p-8 text-center text-xs text-muted-foreground">
+          <p className="font-semibold text-foreground">
+            {clientText(language, 'لا توجد طلبات مطابقة لبحثك.', 'No requests match your search.')}
+          </p>
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="mt-2 text-primary underline hover:text-primary/80"
+          >
+            {clientText(language, 'إعادة تعيين البحث', 'Reset search')}
+          </button>
+        </div>
+      ) : (
+        <div className="divide-y divide-border/70 max-h-[580px] overflow-y-auto overscroll-contain">
+          {filteredRequests.map((request) => (
+            <div key={request.id} className="p-5 transition-colors hover:bg-secondary/15">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Tag
+                    tone={
+                      request.status === 'completed'
+                        ? 'green'
+                        : request.status === 'submitted'
+                        ? 'amber'
+                        : 'blue'
+                    }
+                  >
+                    {requestStatus(language, request.status)}
+                  </Tag>
+                  <p className="mt-2.5 font-display text-lg font-bold text-foreground">
+                    {request.projectName}
+                  </p>
+                </div>
+                <span className="font-code text-[9px] font-semibold text-muted-foreground">
+                  {request.reference}
+                </span>
+              </div>
+
+              <div className="mt-3.5 grid gap-2 border-t border-border/70 pt-3.5 text-xs text-muted-foreground sm:grid-cols-2">
+                <span>
+                  {clientText(language, 'المادة', 'Material')}:{' '}
+                  <strong className="text-foreground">{request.material}</strong>
+                </span>
+                <span>
+                  {clientText(language, 'الكمية', 'Quantity')}:{' '}
+                  <strong className="text-foreground">{request.quantity}</strong>
+                </span>
+                <span>
+                  {clientText(language, 'التشطيب', 'Finish')}:{' '}
+                  <strong className="text-foreground">{request.finish}</strong>
+                </span>
+                <span>
+                  {clientText(language, 'الجدول', 'Timeline')}:{' '}
+                  <strong className="text-foreground">{request.timeline}</strong>
+                </span>
+              </div>
+
+              {/* Engineering Quotation details if provided by admin */}
+              {(request.quoteAmount || request.estimatedDelivery || request.adminFeedback) && (
+                <div className="mt-3.5 border border-primary/30 bg-primary/10 p-3.5 space-y-1.5 rounded-sm">
+                  <p className="font-code text-[10px] uppercase font-bold text-primary">
+                    {clientText(language, 'تسعير وملاحظات الفريق الهندسي', 'ENGINEERING QUOTE & TIMELINE')}
+                  </p>
+                  {request.quoteAmount !== undefined && (
+                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <DollarSign className="size-3.5 text-primary" />
+                      <span>{clientText(language, 'السعر المعتمد:', 'Quoted Price:')}</span>{' '}
+                      <span className="text-primary font-mono text-sm">
+                        {request.quoteAmount} {request.quoteCurrency || 'SAR'}
+                      </span>
+                    </p>
+                  )}
+                  {request.estimatedDelivery && (
+                    <p className="text-xs text-foreground flex items-center gap-1.5">
+                      <Calendar className="size-3.5 text-primary" />
+                      <span>{clientText(language, 'الموعد التقديري للتسليم:', 'Est. Delivery:')}</span>{' '}
+                      <span className="text-accent font-semibold font-mono">
+                        {new Date(request.estimatedDelivery).toLocaleDateString(
+                          language === 'ar' ? 'ar-SA' : 'en-US',
+                        )}
+                      </span>
+                    </p>
+                  )}
+                  {request.adminFeedback && (
+                    <p className="text-xs text-foreground/90 whitespace-pre-wrap pt-1 border-t border-primary/20">
+                      {request.adminFeedback}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ClientPrintingPage() {
-   const { language, requests, isLoading, error, refresh } = useClientDashboard();
+  const { language, requests, isLoading, error, refresh } = useClientDashboard();
   const queryClient = useQueryClient();
   const createRequest = useCreateClientPrintRequest();
   const [form, setForm] = useState<PrintForm>(initialForm);
@@ -32,15 +244,180 @@ export function ClientPrintingPage() {
       setFormError(clientText(language, 'تعذر حفظ الطلب. حاول مرة أخرى.', 'The request could not be saved. Try again.'));
     }
   };
-  return <div className="mx-auto max-w-[1480px]">
-    <PageIntro code="PRINT / 02 — REQUESTS" title={clientText(language, 'طلبات الطباعة', 'Print requests')} description={clientText(language, 'أرسل مواصفات القطعة لفريق AJ، وتابع حالة كل طلب محفوظ على حسابك.', 'Send your part specifications to AJ and track every saved request from your account.')} action={<Tag>{clientText(language, 'بيانات محفوظة', 'PERSISTED DATA')}</Tag>} />
-     {error && !isLoading ? <ClientDataError language={language} onRetry={() => void refresh()} /> : <>{createdReference && <div className="mt-6 flex items-start gap-3 border border-accent/40 bg-accent/10 p-5" data-testid="status-print-request-success"><CircleCheck className="mt-0.5 size-5 shrink-0 text-accent" /><div><p className="font-semibold">{clientText(language, 'تم حفظ طلب الطباعة', 'Print request saved')}</p><p className="mt-1 text-sm text-muted-foreground">{clientText(language, `مرجع الطلب ${createdReference}. سيظهر تحديث الحالة هنا عندما يراجعه الفريق.`, `Request ${createdReference}. Status updates will appear here when the team reviews it.`)}</p></div><button type="button" onClick={() => setCreatedReference('')} className="ms-auto text-xs text-primary hover:underline">{clientText(language, 'إخفاء', 'Dismiss')}</button></div>}
-     <div className="mt-7 grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
-      <Panel><PanelHeader eyebrow="REQUEST LOG" title={clientText(language, 'طلباتك المحفوظة', 'Your saved requests')} />{isLoading ? <p className="p-6 text-sm text-muted-foreground">{clientText(language, 'جارٍ التحميل…', 'Loading…')}</p> : requests.length === 0 ? <div className="p-6 text-sm leading-7 text-muted-foreground">{clientText(language, 'لم ترسل طلبات بعد. استخدم النموذج لإرسال أول طلب.', 'You have not sent any requests yet. Use the form to send your first one.')}</div> : <div className="divide-y divide-border/70">{requests.map((request) => <div key={request.id} className="p-5"><div className="flex items-start justify-between gap-3"><div><Tag tone={request.status === 'completed' ? 'green' : request.status === 'submitted' ? 'amber' : 'blue'}>{requestStatus(language, request.status)}</Tag><p className="mt-3 font-display text-lg font-bold">{request.projectName}</p></div><span className="font-code text-[9px] text-muted-foreground">{request.reference}</span></div><div className="mt-4 grid gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground sm:grid-cols-2"><span>{clientText(language, 'المادة', 'Material')}: <strong className="text-foreground">{request.material}</strong></span><span>{clientText(language, 'الكمية', 'Quantity')}: <strong className="text-foreground">{request.quantity}</strong></span><span>{clientText(language, 'التشطيب', 'Finish')}: <strong className="text-foreground">{request.finish}</strong></span><span>{clientText(language, 'الجدول', 'Timeline')}: <strong className="text-foreground">{request.timeline}</strong></span></div></div>)}</div>}</Panel>
-      <Panel><PanelHeader eyebrow="NEW REQUEST / QUOTE" title={clientText(language, 'إرسال طلب طباعة جديد', 'Send a new print request')} /><form onSubmit={submit} className="grid gap-6 p-5 sm:p-7" data-testid="form-print-request"><div className="grid gap-5 md:grid-cols-2"><label className="grid gap-2 text-sm font-semibold"><span>{clientText(language, 'اسم المشروع', 'Project name')}</span><input required minLength={2} maxLength={160} value={form.projectName} onChange={(event) => update('projectName', event.target.value)} placeholder={clientText(language, 'مثال: غطاء لوحة التحكم', 'e.g. control panel cover')} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary" /></label><label className="grid gap-2 text-sm font-semibold"><span>{clientText(language, 'الكمية', 'Quantity')}</span><input required type="number" min="1" max="1000" value={form.quantity} onChange={(event) => update('quantity', event.target.value)} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary" /></label></div><div className="grid gap-5 md:grid-cols-3"><label className="grid gap-2 text-sm font-semibold"><span>{clientText(language, 'المادة', 'Material')}</span><select value={form.material} onChange={(event) => update('material', event.target.value)} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"><option>PETG-CF</option><option>PLA Pro</option><option>ABS</option><option>TPU 95A</option><option>Nylon</option></select></label><label className="grid gap-2 text-sm font-semibold"><span>{clientText(language, 'نوع التشطيب', 'Finish')}</span><select value={form.finish} onChange={(event) => update('finish', event.target.value)} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"><option value="functional">{clientText(language, 'وظيفي', 'Functional')}</option><option value="visual">{clientText(language, 'عرض بصري', 'Visual prototype')}</option><option value="production">{clientText(language, 'قريب من الإنتاج', 'Production-ready')}</option></select></label><label className="grid gap-2 text-sm font-semibold"><span>{clientText(language, 'الجدول الزمني', 'Timeline')}</span><select value={form.timeline} onChange={(event) => update('timeline', event.target.value)} className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"><option value="standard">{clientText(language, 'قياسي', 'Standard')}</option><option value="priority">{clientText(language, 'أولوية', 'Priority')}</option></select></label></div><label className="grid gap-2 text-sm font-semibold"><span>{clientText(language, 'ملاحظات هندسية', 'Engineering notes')}</span><textarea rows={6} maxLength={3000} value={form.notes} onChange={(event) => update('notes', event.target.value)} placeholder={clientText(language, 'التفاوتات، نقاط التثبيت، أو المتطلبات الخاصة…', 'Tolerances, mounting points, or special requirements…')} className="resize-none border border-input bg-background/60 px-4 py-3 text-sm leading-6 outline-none focus:border-primary" /></label>{formError && <p className="text-sm text-destructive-foreground">{formError}</p>}<div className="flex flex-col justify-between gap-4 border-t border-border pt-5 sm:flex-row sm:items-center"><p className="flex items-start gap-2 text-xs leading-6 text-muted-foreground"><Info className="mt-0.5 size-3.5 shrink-0 text-primary" />{clientText(language, 'سيؤكد الفريق السعر والموعد بعد مراجعة التفاصيل.', 'The team confirms price and timing after reviewing the details.')}</p><button disabled={createRequest.isPending} type="submit" className="inline-flex h-12 items-center justify-center gap-2 bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"><Send className="size-4" />{createRequest.isPending ? clientText(language, 'جارٍ الحفظ…', 'Saving…') : clientText(language, 'إرسال الطلب', 'Send request')}</button></div></form></Panel>
-     </div>
-     <div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4"><Printer className="size-4 text-primary" /><span className="text-xs text-muted-foreground">{clientText(language, 'مراجعة هندسية للطلبات', 'Engineering review for requests')}</span></div><div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4"><Timer className="size-4 text-primary" /><span className="text-xs text-muted-foreground">{clientText(language, 'حالة محفوظة لكل طلب', 'Saved status for every request')}</span></div><div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4"><Package className="size-4 text-primary" /><span className="text-xs text-muted-foreground">{clientText(language, 'تنسيق التسليم بعد التأكيد', 'Delivery coordinated after confirmation')}</span></div></div></>}
-  </div>;
+  return (
+    <div className="mx-auto max-w-[1480px]">
+      <PageIntro
+        code="PRINT / 02 — REQUESTS"
+        title={clientText(language, 'طلبات الطباعة', 'Print requests')}
+        description={clientText(
+          language,
+          'أرسل مواصفات القطعة لفريق AJ، وتابع حالة كل طلب محفوظ على حسابك.',
+          'Send your part specifications to AJ and track every saved request from your account.',
+        )}
+        action={<Tag>{clientText(language, 'بيانات محفوظة', 'PERSISTED DATA')}</Tag>}
+      />
+      {error && !isLoading ? (
+        <ClientDataError language={language} onRetry={() => void refresh()} />
+      ) : (
+        <>
+          {createdReference && (
+            <div className="mt-6 flex items-start gap-3 border border-accent/40 bg-accent/10 p-5" data-testid="status-print-request-success">
+              <CircleCheck className="mt-0.5 size-5 shrink-0 text-accent" />
+              <div>
+                <p className="font-semibold">{clientText(language, 'تم حفظ طلب الطباعة', 'Print request saved')}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {clientText(
+                    language,
+                    `مرجع الطلب ${createdReference}. سيظهر تحديث الحالة هنا عندما يراجعه الفريق.`,
+                    `Request ${createdReference}. Status updates will appear here when the team reviews it.`,
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreatedReference('')}
+                className="ms-auto text-xs text-primary hover:underline"
+              >
+                {clientText(language, 'إخفاء', 'Dismiss')}
+              </button>
+            </div>
+          )}
+          <div className="mt-7 grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
+            <Panel>
+              <PanelHeader
+                eyebrow="REQUEST LOG"
+                title={clientText(language, 'طلباتك المحفوظة', 'Your saved requests')}
+              />
+              <SavedPrintRequests
+                requests={requests}
+                isLoading={isLoading}
+                language={language}
+              />
+            </Panel>
+            <Panel>
+              <PanelHeader
+                eyebrow="NEW REQUEST / QUOTE"
+                title={clientText(language, 'إرسال طلب طباعة جديد', 'Send a new print request')}
+              />
+              <form onSubmit={submit} className="grid gap-6 p-5 sm:p-7" data-testid="form-print-request">
+                <div className="grid gap-5 md:grid-cols-2">
+                  <label className="grid gap-2 text-sm font-semibold">
+                    <span>{clientText(language, 'اسم المشروع', 'Project name')}</span>
+                    <input
+                      required
+                      minLength={2}
+                      maxLength={160}
+                      value={form.projectName}
+                      onChange={(event) => update('projectName', event.target.value)}
+                      placeholder={clientText(language, 'مثال: غطاء لوحة التحكم', 'e.g. control panel cover')}
+                      className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm font-semibold">
+                    <span>{clientText(language, 'الكمية', 'Quantity')}</span>
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={form.quantity}
+                      onChange={(event) => update('quantity', event.target.value)}
+                      className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"
+                    />
+                  </label>
+                </div>
+                <div className="grid gap-5 md:grid-cols-3">
+                  <label className="grid gap-2 text-sm font-semibold">
+                    <span>{clientText(language, 'المادة', 'Material')}</span>
+                    <select
+                      value={form.material}
+                      onChange={(event) => update('material', event.target.value)}
+                      className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"
+                    >
+                      <option>PETG-CF</option>
+                      <option>PLA Pro</option>
+                      <option>ABS</option>
+                      <option>TPU 95A</option>
+                      <option>Nylon</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-2 text-sm font-semibold">
+                    <span>{clientText(language, 'نوع التشطيب', 'Finish')}</span>
+                    <select
+                      value={form.finish}
+                      onChange={(event) => update('finish', event.target.value)}
+                      className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"
+                    >
+                      <option value="functional">{clientText(language, 'وظيفي', 'Functional')}</option>
+                      <option value="visual">{clientText(language, 'عرض بصري', 'Visual prototype')}</option>
+                      <option value="production">{clientText(language, 'قريب من الإنتاج', 'Production-ready')}</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-2 text-sm font-semibold">
+                    <span>{clientText(language, 'الجدول الزمني', 'Timeline')}</span>
+                    <select
+                      value={form.timeline}
+                      onChange={(event) => update('timeline', event.target.value)}
+                      className="h-12 border border-input bg-background/60 px-4 text-sm outline-none focus:border-primary"
+                    >
+                      <option value="standard">{clientText(language, 'قياسي', 'Standard')}</option>
+                      <option value="priority">{clientText(language, 'أولوية', 'Priority')}</option>
+                    </select>
+                  </label>
+                </div>
+                <label className="grid gap-2 text-sm font-semibold">
+                  <span>{clientText(language, 'ملاحظات هندسية', 'Engineering notes')}</span>
+                  <textarea
+                    rows={6}
+                    maxLength={3000}
+                    value={form.notes}
+                    onChange={(event) => update('notes', event.target.value)}
+                    placeholder={clientText(language, 'التفاوتات، نقاط التثبيت، أو المتطلبات الخاصة…', 'Tolerances, mounting points, or special requirements…')}
+                    className="resize-none border border-input bg-background/60 px-4 py-3 text-sm leading-6 outline-none focus:border-primary"
+                  />
+                </label>
+                {formError && <p className="text-sm text-destructive-foreground">{formError}</p>}
+                <div className="flex flex-col justify-between gap-4 border-t border-border pt-5 sm:flex-row sm:items-center">
+                  <p className="flex items-start gap-2 text-xs leading-6 text-muted-foreground">
+                    <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                    {clientText(language, 'سيؤكد الفريق السعر والموعد بعد مراجعة التفاصيل.', 'The team confirms price and timing after reviewing the details.')}
+                  </p>
+                  <button
+                    disabled={createRequest.isPending}
+                    type="submit"
+                    className="inline-flex h-12 items-center justify-center gap-2 bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <Send className="size-4" />
+                    {createRequest.isPending ? clientText(language, 'جارٍ الحفظ…', 'Saving…') : clientText(language, 'إرسال الطلب', 'Send request')}
+                  </button>
+                </div>
+              </form>
+            </Panel>
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4">
+              <Printer className="size-4 text-primary" />
+              <span className="text-xs text-muted-foreground">
+                {clientText(language, 'مراجعة هندسية للطلبات', 'Engineering review for requests')}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4">
+              <Timer className="size-4 text-primary" />
+              <span className="text-xs text-muted-foreground">
+                {clientText(language, 'حالة محفوظة لكل طلب', 'Saved status for every request')}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 border border-border/70 bg-secondary/20 p-4">
+              <Package className="size-4 text-primary" />
+              <span className="text-xs text-muted-foreground">
+                {clientText(language, 'تنسيق التسليم بعد التأكيد', 'Delivery coordinated after confirmation')}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default ClientPrintingPage;

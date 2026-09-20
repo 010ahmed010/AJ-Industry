@@ -163,17 +163,30 @@ export function AdminPrintingPage({ language }: { language: Language }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={adminText(language, 'بحث بالمشروع أو المرجع أو العميل…', 'Search project, ref, client…')}
-            className="h-9 w-full border border-border bg-secondary/30 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="h-9 w-full border border-border bg-secondary/30 pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              title="مسح"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Orders List */}
       <div className="border border-border bg-[#0b1528]">
-        <div className="border-b border-border/80 px-6 py-4">
-          <p className="font-code text-xs text-muted-foreground">
-            {requests.length} {adminText(language, 'طلب مسجل في النظام', 'orders in database')}
-          </p>
+        <div className="border-b border-border/80 px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="inline-block size-2 rounded-full bg-primary" />
+            <p className="font-code text-xs text-muted-foreground">
+              {requests.length} {adminText(language, 'طلب مسجل في النظام', 'orders in database')}
+            </p>
+          </div>
         </div>
 
         {isLoading ? (
@@ -193,9 +206,18 @@ export function AdminPrintingPage({ language }: { language: Language }) {
                 'Switch to the Client View and create an order to see live real-time synchronization.',
               )}
             </p>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="mt-3 text-xs text-primary underline hover:text-primary/80"
+              >
+                {adminText(language, 'مسح البحث', 'Clear search')}
+              </button>
+            )}
           </div>
         ) : (
-          <div className="divide-y divide-border/60">
+          <div className="divide-y divide-border/60 max-h-[620px] overflow-y-auto overscroll-contain">
             {requests.map((order) => (
               <div
                 key={order.id}
