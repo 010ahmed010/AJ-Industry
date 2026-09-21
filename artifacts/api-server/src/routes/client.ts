@@ -67,56 +67,169 @@ async function authenticatedUserId(req: Request, res: Response): Promise<string 
     ? authHeader.slice(7).trim()
     : (req.headers["x-auth-token"] as string) || "";
 
+  let resolvedUserId: string | null = null;
+  let tokenEmail: string | undefined;
+
   if (token) {
+    // 1. Check MongoDB session
     const session = await validateSession(token);
     if (session) {
-      return session.userId;
+      resolvedUserId = session.userId;
+    } else {
+      // 2. Check if Clerk JWT token
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payloadJson = Buffer.from(parts[1], "base64url").toString("utf-8");
+          const payload = JSON.parse(payloadJson);
+          if (payload && typeof payload.sub === "string" && payload.sub.trim()) {
+            if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
+              res.status(401).json({ error: "Session token expired. Please sign in again." });
+              return null;
+            }
+            resolvedUserId = payload.sub.trim();
+            if (payload.email && typeof payload.email === "string") {
+              tokenEmail = payload.email.toLowerCase().trim();
+            }
+          }
+        }
+      } catch {}
     }
   }
 
-  // In development / demo mode, fallback to demo client user if no token sent
-  return "demo_client_user";
+  // 3. Client user header from authenticated frontend context
+  if (!resolvedUserId) {
+    const clientUserHeader = (req.headers["x-client-user-id"] as string)?.trim();
+    if (clientUserHeader) {
+      resolvedUserId = clientUserHeader;
+    }
+  }
+
+  if (!resolvedUserId) {
+    res.status(401).json({ error: "Authentication required" });
+    return null;
+  }
+
+  // 4. Strong Admin Control: Check if client account has been revoked / deleted by administrator
+  const clientEmailHeader = (req.headers["x-client-email"] as string)?.trim().toLowerCase();
+  const effectiveEmail = tokenEmail || clientEmailHeader;
+
+  try {
+    const db = await getMongoDb();
+    const query: any[] = [{ userId: resolvedUserId }];
+    if (effectiveEmail && effectiveEmail.includes("@")) {
+      query.push({ email: effectiveEmail });
+    }
+    const revoked = await db.collection("revokedClients").findOne({ $or: query });
+    if (revoked) {
+      res.status(403).json({
+        error: "ACCOUNT_REVOKED",
+        revoked: true,
+        message: "تم إلغاء تفعيل هذا الحساب وحذفه من قبل إدارة المصنع. الوصول محظور. / This account has been deleted or deactivated by the administrator.",
+      });
+      return null;
+    }
+  } catch (checkErr) {
+    console.warn("Revocation check note:", checkErr);
+  }
+
+  return resolvedUserId;
 }
 
-async function loadOrCreateProfile(userId: string): Promise<ClientProfileRecord> {
+interface ProfileHints {
+  email?: string;
+  name?: string;
+  company?: string;
+}
+
+function extractHints(req: Request): ProfileHints {
+  const hints: ProfileHints = {};
+  const emailHeader = (req.headers["x-client-email"] as string)?.trim().toLowerCase();
+  const nameHeader = (req.headers["x-client-name"] as string)?.trim();
+  if (emailHeader && emailHeader.includes("@")) {
+    hints.email = emailHeader;
+  }
+  if (nameHeader) {
+    try {
+      hints.name = decodeURIComponent(nameHeader);
+    } catch {
+      hints.name = nameHeader;
+    }
+  }
+  return hints;
+}
+
+async function loadOrCreateProfile(userId: string, hints?: ProfileHints): Promise<ClientProfileRecord> {
   const db = await getMongoDb();
   const profiles = db.collection<ClientProfileRecord>("clientProfiles");
-  const existing = await profiles.findOne({ userId });
+  const users = db.collection<UserRecord>("users");
 
-  const users = db.collection("users");
+  const existing = await profiles.findOne({ userId });
   const user = await users.findOne({ _id: userId });
 
-  const email = user?.email ?? (existing?.email || "client@aj-industry.com");
-  const username = existing?.username || email;
+  const email =
+    (hints?.email && hints.email.includes("@") ? hints.email : undefined) ||
+    existing?.email ||
+    user?.email ||
+    "";
+
+  const username = existing?.username || user?.username || email || userId;
+
   const name =
+    (hints?.name && hints.name.trim() ? hints.name.trim() : undefined) ||
     existing?.name ||
     user?.name ||
-    "عميل AJ Industry";
+    "عميل AJ";
+
+  const company = existing?.company ?? user?.company ?? hints?.company ?? "";
+
+  const now = new Date();
   const profile: ClientProfileRecord = {
     userId,
     username,
     email,
     name,
-    company: existing?.company ?? user?.company ?? "AJ Partner",
-    createdAt: existing?.createdAt ?? new Date(),
-    updatedAt: new Date(),
+    company,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
   };
 
-  await profiles.updateOne(
-    { userId },
-    {
-      $set: {
-        userId: profile.userId,
-        username: profile.username,
-        email: profile.email,
-        name: profile.name,
-        company: profile.company,
-        updatedAt: profile.updatedAt,
+  await Promise.all([
+    profiles.updateOne(
+      { userId },
+      {
+        $set: {
+          userId: profile.userId,
+          username: profile.username,
+          email: profile.email,
+          name: profile.name,
+          company: profile.company,
+          status: "active",
+          updatedAt: profile.updatedAt,
+        },
+        $setOnInsert: { createdAt: profile.createdAt },
       },
-      $setOnInsert: { createdAt: profile.createdAt },
-    },
-    { upsert: true },
-  );
+      { upsert: true },
+    ),
+    users.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          clerkId: userId,
+          username: profile.username,
+          email: profile.email,
+          name: profile.name,
+          company: profile.company,
+          role: "client",
+          status: "active",
+          updatedAt: profile.updatedAt,
+        },
+        $setOnInsert: { createdAt: profile.createdAt },
+      },
+      { upsert: true },
+    ),
+  ]);
+
   return profile;
 }
 
@@ -180,10 +293,50 @@ router.get("/client/profile", async (req, res): Promise<void> => {
   if (!userId) return;
 
   try {
-    const profile = await loadOrCreateProfile(userId);
+    const profile = await loadOrCreateProfile(userId, extractHints(req));
     res.json(publicProfile(profile));
   } catch (error) {
     req.log.error({ err: error, userId }, "Unable to load client profile");
+    res.status(503).json({ error: "Client profile service is temporarily unavailable" });
+  }
+});
+
+// POST /api/client/sync-profile - Sync profile data from Clerk client session
+router.post("/client/sync-profile", async (req, res): Promise<void> => {
+  const userId = await authenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { email, name, company } = req.body || {};
+  const hints: ProfileHints = extractHints(req);
+  if (typeof email === "string" && email.includes("@")) hints.email = email.trim();
+  if (typeof name === "string" && name.trim()) hints.name = name.trim();
+  if (typeof company === "string" && company.trim()) hints.company = company.trim();
+
+  try {
+    const profile = await loadOrCreateProfile(userId, hints);
+    const db = await getMongoDb();
+    const updates: Partial<ClientProfileRecord> = { updatedAt: new Date() };
+
+    if (hints.email && (!profile.email || profile.email === "client@aj-industry.com")) {
+      updates.email = hints.email;
+      profile.email = hints.email;
+    }
+    if (hints.name && (profile.name === "عميل AJ" || !profile.name)) {
+      updates.name = hints.name;
+      profile.name = hints.name;
+    }
+    if (hints.company && !profile.company) {
+      updates.company = hints.company;
+      profile.company = hints.company;
+    }
+
+    if (Object.keys(updates).length > 1) {
+      await db.collection<ClientProfileRecord>("clientProfiles").updateOne({ userId }, { $set: updates });
+    }
+
+    res.json(publicProfile(profile));
+  } catch (error) {
+    req.log.error({ err: error, userId }, "Unable to sync client profile");
     res.status(503).json({ error: "Client profile service is temporarily unavailable" });
   }
 });
@@ -198,7 +351,7 @@ router.patch("/client/profile", async (req, res): Promise<void> => {
   }
 
   try {
-    const profile = await loadOrCreateProfile(userId);
+    const profile = await loadOrCreateProfile(userId, extractHints(req));
     const db = await getMongoDb();
     const updated: ClientProfileRecord = {
       ...profile,
@@ -220,7 +373,7 @@ router.get("/client/overview", async (req, res): Promise<void> => {
 
   try {
     const [profile, requests] = await Promise.all([
-      loadOrCreateProfile(userId),
+      loadOrCreateProfile(userId, extractHints(req)),
       (async () => {
         const db = await getMongoDb();
         return db
@@ -355,7 +508,7 @@ router.patch("/client/print-requests/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    if (existing.userId !== userId && userId !== "demo_client_user") {
+    if (existing.userId !== userId) {
       res.status(403).json({ error: "غير مصرح لك بتعديل هذا الطلب", errorEn: "Unauthorized" });
       return;
     }
@@ -403,7 +556,7 @@ router.delete("/client/print-requests/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    if (existing.userId !== userId && userId !== "demo_client_user") {
+    if (existing.userId !== userId) {
       res.status(403).json({ error: "غير مصرح لك بحذف هذا الطلب", errorEn: "Unauthorized" });
       return;
     }
@@ -443,7 +596,7 @@ router.patch("/client/consultations/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    if (existing.userId !== userId && userId !== "demo_client_user") {
+    if (existing.userId !== userId) {
       res.status(403).json({ error: "غير مصرح لك بتعديل هذه الاستشارة", errorEn: "Unauthorized" });
       return;
     }
@@ -490,7 +643,7 @@ router.delete("/client/consultations/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    if (existing.userId !== userId && userId !== "demo_client_user") {
+    if (existing.userId !== userId) {
       res.status(403).json({ error: "غير مصرح لك بحذف هذه الاستشارة", errorEn: "Unauthorized" });
       return;
     }

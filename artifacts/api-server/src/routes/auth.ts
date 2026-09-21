@@ -71,40 +71,15 @@ async function ensureDefaultUsers() {
       ],
     });
 
-    // Ensure default client exists
-    const client = await users.findOne({ email: "client@aj-industry.com" });
-    if (!client) {
-      const defaultClientId = "demo_client_user";
-      const demoClient: UserRecord = {
-        _id: defaultClientId,
-        username: "client",
-        email: "client@aj-industry.com",
-        passwordHash: hashPassword("Client@123"),
-        name: "عميل AJ للتصنيع",
-        company: "AJ Industrial Partner",
-        role: "client",
-        createdAt: now,
-        updatedAt: now,
-      };
-      await users.insertOne(demoClient);
-
-      const profiles = db.collection("clientProfiles");
-      await profiles.updateOne(
-        { userId: defaultClientId },
-        {
-          $set: {
-            userId: defaultClientId,
-            username: demoClient.email,
-            email: demoClient.email,
-            name: demoClient.name,
-            company: demoClient.company,
-            updatedAt: now,
-          },
-          $setOnInsert: { createdAt: now },
-        },
-        { upsert: true },
-      );
-    }
+    // Strictly purge all legacy demo client accounts from database
+    await Promise.all([
+      users.deleteMany({
+        $or: [{ _id: "demo_client_user" }, { email: "client@aj-industry.com" }],
+      }),
+      clientProfilesColl.deleteMany({
+        $or: [{ userId: "demo_client_user" }, { email: "client@aj-industry.com" }],
+      }),
+    ]);
   } catch (err) {
     console.warn("[Auth] Failed to seed default users:", err);
   }
@@ -527,50 +502,80 @@ router.post("/auth/admin-set-password", async (req: Request, res: Response): Pro
   }
 });
 
-// POST /api/auth/demo-login - Convenient quick login for demonstration
-router.post("/auth/demo-login", async (req: Request, res: Response): Promise<void> => {
-  const { role } = req.body || {};
-  const isAdmin = role === "admin";
+// POST /api/auth/clerk-sync - Provision or sync user identity from Clerk
+router.post("/auth/clerk-sync", async (req: Request, res: Response): Promise<void> => {
+  const { userId, email, name, company } = req.body || {};
+  if (!userId) {
+    res.status(400).json({ error: "userId is required" });
+    return;
+  }
 
   try {
-    await ensureDefaultUsers();
     const db = await getMongoDb();
-    const users = db.collection<UserRecord>("users");
-    const targetEmail = isAdmin ? "admin@aj-industry.com" : "client@aj-industry.com";
+    const cleanEmail = typeof email === "string" && email.includes("@") ? email.trim().toLowerCase() : "";
 
-    let user = await users.findOne({ email: targetEmail });
-    if (!user) {
-      // Create user if missing
-      const now = new Date();
-      user = {
-        _id: isAdmin ? "admin_super_user" : "demo_client_user",
-        username: isAdmin ? "admin" : "client",
-        email: targetEmail,
-        passwordHash: hashPassword(isAdmin ? "ahmedahmed" : "Client@123"),
-        name: isAdmin ? "المدير" : "عميل AJ للتصنيع",
-        company: isAdmin ? "AJ Operations" : "AJ Partner",
-        role: isAdmin ? "admin" : "client",
-        createdAt: now,
-        updatedAt: now,
-      };
-      await users.insertOne(user);
+    // Check if client account has been revoked / deleted by administrator
+    const revoked = await db.collection("revokedClients").findOne({
+      $or: [
+        { userId },
+        ...(cleanEmail ? [{ email: cleanEmail }] : []),
+      ],
+    });
+
+    if (revoked) {
+      res.status(403).json({
+        error: "ACCOUNT_REVOKED",
+        revoked: true,
+        message: "تم إلغاء تفعيل هذا الحساب وحذفه بواسطة إدارة المصنع / This account has been deleted by the administrator.",
+      });
+      return;
     }
 
-    const token = await createSession(user);
+    const now = new Date();
+    const users = db.collection<UserRecord>("users");
+    const profiles = db.collection("clientProfiles");
 
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        company: user.company,
-        role: user.role,
+    const cleanName = typeof name === "string" && name.trim() ? name.trim() : "عميل AJ";
+    const cleanCompany = typeof company === "string" ? company.trim() : "";
+
+    await users.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          clerkId: userId,
+          username: cleanEmail || userId,
+          email: cleanEmail,
+          name: cleanName,
+          company: cleanCompany,
+          role: "client",
+          status: "active",
+          updatedAt: now,
+        },
+        $setOnInsert: { createdAt: now },
       },
-    });
+      { upsert: true },
+    );
+
+    await profiles.updateOne(
+      { userId },
+      {
+        $set: {
+          userId,
+          username: cleanEmail || userId,
+          email: cleanEmail,
+          name: cleanName,
+          company: cleanCompany,
+          status: "active",
+          updatedAt: now,
+        },
+        $setOnInsert: { createdAt: now },
+      },
+      { upsert: true },
+    );
+
+    res.json({ success: true, userId, email: cleanEmail, name: cleanName });
   } catch (err: any) {
-    res.status(500).json({ error: "Failed demo login", details: err?.message });
+    res.status(500).json({ error: "Failed to sync user", details: err?.message });
   }
 });
 

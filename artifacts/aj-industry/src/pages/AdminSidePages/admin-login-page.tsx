@@ -87,7 +87,7 @@ export function AdminLoginPage() {
     }
   };
 
-  const handleFillDemo = () => {
+  const handleFillAdminDefault = () => {
     setUsername("admin");
     setPassword("ahmedahmed");
     setError(null);
@@ -294,7 +294,7 @@ export function AdminLoginPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={handleFillDemo}
+                    onClick={handleFillAdminDefault}
                     className="flex shrink-0 items-center justify-center self-stretch sm:self-auto rounded bg-primary/20 px-3 py-1.5 font-code text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-[#071126] text-center"
                   >
                     تعبئة تلقائية

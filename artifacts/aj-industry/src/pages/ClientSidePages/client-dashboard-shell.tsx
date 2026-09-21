@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useClerk } from '@/lib/auth';
+import { useAuth, useClerk } from '@/lib/auth';
 import { safeStorage } from '@/lib/storage';
 import { useGetClientOverview, useGetClientProfile, useUpdateClientProfile, getGetClientOverviewQueryKey, getGetClientProfileQueryKey } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
@@ -26,7 +26,7 @@ export type ClientRequest = {
   kind: 'print';
   projectName: string;
   serviceSlug: string;
-  status: 'submitted' | 'reviewing' | 'quoted' | 'scheduled' | 'completed';
+  status: 'submitted' | 'reviewing' | 'quoted' | 'scheduled' | 'completed' | 'suspended';
   statusAr: string;
   statusEn: string;
   material: string;
@@ -78,11 +78,17 @@ export function ClientDashboardProvider({ children }: { children: ReactNode }) {
     const saved = safeStorage.getItem('aj-client-language') || safeStorage.getItem('aj-language');
     return saved === 'en' ? 'en' : 'ar';
   });
+  const { user: authUser } = useAuth();
   const profileQuery = useGetClientProfile();
   const overviewQuery = useGetClientOverview();
   const updateProfile = useUpdateClientProfile();
 
-  const profile = overviewQuery.data?.profile ?? profileQuery.data ?? emptyProfile;
+  const rawProfile = overviewQuery.data?.profile ?? profileQuery.data ?? emptyProfile;
+  const profile: ClientProfile = {
+    ...rawProfile,
+    email: authUser?.email || rawProfile.email || '',
+    name: authUser?.name || rawProfile.name || 'عميل AJ',
+  };
   const requests = (overviewQuery.data?.requests ?? []) as ClientRequest[];
   const saveProfile = async (nextProfile: Pick<ClientProfile, 'name' | 'company'>) => {
     const result = await updateProfile.mutateAsync({ data: nextProfile });

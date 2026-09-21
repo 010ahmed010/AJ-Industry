@@ -6,7 +6,11 @@ import {
   Building2,
   Calendar,
   CheckCircle2,
+  Cloud,
+  ExternalLink,
+  Key,
   Loader2,
+  Lock,
   Mail,
   RefreshCw,
   Search,
@@ -15,6 +19,7 @@ import {
   UserMinus,
   Users,
   X,
+  Zap,
 } from 'lucide-react';
 import {
   adminText,
@@ -42,11 +47,23 @@ interface DeleteClientResult {
   };
 }
 
+interface ClerkStatusResult {
+  configured: boolean;
+  valid: boolean;
+  publishableKey?: string;
+  keyPrefix?: string;
+  message: string;
+  messageEn?: string;
+  details?: string;
+}
+
 export function AdminClientsPage({ language }: { language: Language }) {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClientForDeletion, setSelectedClientForDeletion] = useState<AdminClientProfile | null>(null);
   const [deleteAssociatedData, setDeleteAssociatedData] = useState(true);
+  const [clerkKeyInput, setClerkKeyInput] = useState('');
+  const [purgeEmailInput, setPurgeEmailInput] = useState('');
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -59,6 +76,79 @@ export function AdminClientsPage({ language }: { language: Language }) {
     refetchInterval: 12_000,
   });
 
+  // Query Clerk status
+  const { data: clerkStatus, isLoading: isClerkStatusLoading, refetch: refetchClerkStatus } = useQuery<ClerkStatusResult>({
+    queryKey: ['admin-clerk-status'],
+    queryFn: () => customFetch<ClerkStatusResult>('/api/admin/clerk-status'),
+  });
+
+  // Mutation to save/test new Clerk Secret Key
+  const updateClerkKeyMutation = useMutation({
+    mutationFn: async (secretKey: string) => {
+      return customFetch<{ success: boolean; message: string }>('/api/admin/clerk-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secretKey }),
+      });
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-clerk-status'] });
+      setFeedback({
+        type: 'success',
+        message: language === 'ar' ? 'تم تحديث واختبار مفتاح Clerk بنجاح!' : 'Clerk Secret Key verified and saved!',
+        details: data.message,
+      });
+      setClerkKeyInput('');
+    },
+    onError: (err: any) => {
+      setFeedback({
+        type: 'error',
+        message: language === 'ar' ? 'فشل التحقق من مفتاح Clerk' : 'Failed to verify Clerk key',
+        details: err?.message || 'تأكد من أن المفتاح يبدأ بـ sk_test_ أو sk_live_ ومأخوذ من dashboard.clerk.com',
+      });
+    },
+  });
+
+  // Mutation to force purge a user by email from Clerk and MongoDB
+  const purgeUserMutation = useMutation({
+    mutationFn: async (email: string) => {
+      return customFetch<{
+        success: boolean;
+        mongodbCleaned: boolean;
+        clerkCleaned: boolean;
+        message: string;
+        target: string;
+      }>('/api/admin/clerk-purge-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-clients'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      setFeedback({
+        type: data.clerkCleaned ? 'success' : 'error',
+        message: data.clerkCleaned
+          ? (language === 'ar'
+              ? `تم حذف وتطهير الحساب (${data.target}) بنجاح من خوادم Clerk وقاعدة بيانات الموقع!`
+              : `User (${data.target}) successfully purged from Clerk cloud servers and MongoDB!`)
+          : (language === 'ar'
+              ? `تم تطهير الحساب من قاعدة البيانات فقط. لم يتم الحذف من Clerk السحابية.`
+              : `Purged from local database only. Cloud deletion requires valid Clerk key.`),
+        details: data.message,
+      });
+      setPurgeEmailInput('');
+    },
+    onError: (err: any) => {
+      setFeedback({
+        type: 'error',
+        message: language === 'ar' ? 'فشل حذف الحساب' : 'Failed to purge user',
+        details: err?.message,
+      });
+    },
+  });
+
   // Delete mutation calling our secure DELETE /api/admin/clients/:userId endpoint
   const deleteClientMutation = useMutation({
     mutationFn: async ({ userId, deleteAssociated }: { userId: string; deleteAssociated: boolean }) => {
@@ -69,26 +159,28 @@ export function AdminClientsPage({ language }: { language: Language }) {
       });
     },
     onSuccess: (data, variables) => {
-      // Invalidate relevant queries to immediately refresh statistics and client list
       void queryClient.invalidateQueries({ queryKey: ['admin-clients'] });
       void queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
 
       const clientName = selectedClientForDeletion?.name || variables.userId;
       setSelectedClientForDeletion(null);
 
-      const clerkMsg = data.clerk?.deleted
-        ? (language === 'ar' ? 'تم حذف الحساب من Clerk' : 'Removed from Clerk')
-        : (data.clerk?.message || '');
+      const clerkDeleted = Boolean(data.clerk?.deleted);
+      const clerkMsg = data.clerk?.message || '';
 
       const mongoDetails = data.mongodb
-        ? `${language === 'ar' ? 'تمت إزالة سجلات MongoDB' : 'Removed MongoDB records'}: ${data.mongodb.profilesDeleted} ملفات, ${data.mongodb.sessionsDeleted} جلسات${data.mongodb.requestsDeleted ? `, ${data.mongodb.requestsDeleted} طلبات` : ''}`
+        ? `${language === 'ar' ? 'سجلات MongoDB المزالة' : 'Removed MongoDB records'}: ${data.mongodb.profilesDeleted} ملفات, ${data.mongodb.sessionsDeleted} جلسات${data.mongodb.requestsDeleted ? `, ${data.mongodb.requestsDeleted} طلبات` : ''}`
         : '';
 
       setFeedback({
         type: 'success',
-        message: language === 'ar'
-          ? `تم حذف حساب العميل "${clientName}" بنجاح من MongoDB و Clerk.`
-          : `Client "${clientName}" credentials successfully purged from MongoDB and Clerk.`,
+        message: clerkDeleted
+          ? (language === 'ar'
+              ? `تم حذف حساب العميل "${clientName}" بنجاح من قاعدة البيانات وخوادم Clerk معاً.`
+              : `Client "${clientName}" credentials successfully purged from MongoDB and Clerk.`)
+          : (language === 'ar'
+              ? `تم حذف وتطهير بيانات العميل "${clientName}" من قاعدة بيانات الموقع بنجاح. (تنبيه: الحذف من خوادم Clerk يتطلب توفير مفتاح Secret Key صالح).`
+              : `Client "${clientName}" purged from MongoDB. (Notice: Clerk deletion requires a valid secret key).`),
         details: [clerkMsg, mongoDetails].filter(Boolean).join(' · '),
       });
     },
@@ -198,6 +290,158 @@ export function AdminClientsPage({ language }: { language: Language }) {
           </button>
         </div>
       )}
+
+      {/* Clerk Cloud Synchronization & Control Card */}
+      <div className="rounded-xl border border-[#2a4164] bg-[#0b1528] p-5 shadow-lg">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center border-b border-[#2a4164]/60 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
+              <Cloud className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-base font-bold text-foreground">
+                {adminText(language, 'مزامنة Clerk السحابية وإدارة المفاتيح', 'Clerk Cloud Sync & Secret Key Control')}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {adminText(
+                  language,
+                  'التحكم في حذف الحسابات ومزامنة بيانات الاعتماد مباشرة بين MongoDB وسحابة Clerk.',
+                  'Direct synchronization and automated user purging between MongoDB and Clerk servers.'
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Connection Status Badge */}
+          <div className="flex items-center gap-2">
+            {isClerkStatusLoading ? (
+              <span className="flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>فحص الربط...</span>
+              </span>
+            ) : clerkStatus?.valid ? (
+              <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-code text-xs font-semibold text-emerald-400">
+                <CheckCircle2 className="size-3.5" />
+                <span>{adminText(language, `متصل (${clerkStatus.keyPrefix || 'sk_test_...'})`, `Connected (${clerkStatus.keyPrefix || 'Active'})`)}</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 font-code text-xs font-semibold text-amber-400">
+                <AlertTriangle className="size-3.5" />
+                <span>{adminText(language, 'بحاجة لمفتاح صالح sk_test_...', 'Secret Key (sk_test_...) Required')}</span>
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void refetchClerkStatus()}
+              className="grid size-8 place-items-center rounded-lg border border-border/80 bg-secondary/30 text-muted-foreground transition-colors hover:text-foreground"
+              title="إعادة فحص الاتصال"
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Informative Explanation */}
+        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+          <p>
+            {adminText(
+              language,
+              '💡 توضيح تقني: عند حذف أي حساب عميل من الجدول بالأسفل، يتم فوراً شطب بياناته وسجلاته بالكامل من قاعدة بيانات الموقع (MongoDB). لكي يتم أيضاً حذف الحساب من خوادم Clerk السحابية (حتى لا يظهر للمستخدم "That email is taken" عند التسجيل مجدداً)، يجب تزويد النظام بمفتاح Secret Key صالح من لوحة Clerk، أو استخدام أداة التطهير المباشر بالأسفل.',
+              '💡 Technical note: Deleting a client below immediately purges all profiles and sessions from MongoDB. To also purge the account from Clerk servers automatically (preventing "That email is taken" on re-registration), a valid Clerk Secret Key is required.'
+            )}
+          </p>
+        </div>
+
+        {/* Action Tools Grid */}
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Tool 1: Force Purge by Email */}
+          <div className="rounded-lg border border-[#2a4164]/80 bg-[#101f37] p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <UserMinus className="size-4 text-destructive" />
+              <h3 className="text-xs font-bold text-foreground">
+                {adminText(language, 'تطهير حساب محدد بالبريد الإلكتروني', 'Force Purge User by Email')}
+              </h3>
+            </div>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              {adminText(
+                language,
+                'أدخل البريد (مثل kaliofmylaptop@gmail.com) لشطبه نهائياً من قاعدة البيانات وخوادم Clerk.',
+                'Enter email to wipe all credentials from MongoDB and attempt direct Clerk cloud deletion.'
+              )}
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={purgeEmailInput}
+                onChange={(e) => setPurgeEmailInput(e.target.value)}
+                placeholder="kaliofmylaptop@gmail.com"
+                className="h-9 flex-1 rounded-md border border-border/80 bg-[#0b1528] px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
+              />
+              <button
+                type="button"
+                disabled={!purgeEmailInput.trim() || purgeUserMutation.isPending}
+                onClick={() => purgeUserMutation.mutate(purgeEmailInput.trim())}
+                className="flex h-9 items-center gap-1.5 rounded-md bg-destructive/90 px-3.5 text-xs font-bold text-destructive-foreground transition-opacity hover:bg-destructive disabled:opacity-50"
+              >
+                {purgeUserMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                <span>{adminText(language, 'تطهير الآن', 'Purge Now')}</span>
+              </button>
+            </div>
+            {!clerkStatus?.valid && (
+              <div className="mt-2.5 flex items-center justify-between text-[11px]">
+                <span className="text-amber-400/90">
+                  {adminText(language, 'لحذف المستخدم يدوياً من Clerk بنقرة واحدة:', 'To delete user directly in Clerk:')}
+                </span>
+                <a
+                  href="https://dashboard.clerk.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                >
+                  <span>Clerk Dashboard &rarr;</span>
+                  <ExternalLink className="size-3" />
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Tool 2: Configure Secret Key */}
+          <div className="rounded-lg border border-[#2a4164]/80 bg-[#101f37] p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Key className="size-4 text-primary" />
+              <h3 className="text-xs font-bold text-foreground">
+                {adminText(language, 'تهيئة مفتاح Clerk Secret Key', 'Configure Clerk Secret Key')}
+              </h3>
+            </div>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              {adminText(
+                language,
+                'الصق المفتاح الذي يبدأ بـ sk_test_... من dashboard.clerk.com -> API Keys لتفعيل الحذف التلقائي.',
+                'Paste key starting with sk_test_... from dashboard.clerk.com -> API Keys to enable automated deletion.'
+              )}
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={clerkKeyInput}
+                onChange={(e) => setClerkKeyInput(e.target.value)}
+                placeholder="sk_test_••••••••••••••••••••••••"
+                className="h-9 flex-1 rounded-md border border-border/80 bg-[#0b1528] px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
+              />
+              <button
+                type="button"
+                disabled={!clerkKeyInput.trim() || updateClerkKeyMutation.isPending}
+                onClick={() => updateClerkKeyMutation.mutate(clerkKeyInput.trim())}
+                className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-xs font-bold text-[#071126] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {updateClerkKeyMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Zap className="size-3.5" />}
+                <span>{adminText(language, 'حفظ واختبار', 'Save & Test')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Search and stats bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

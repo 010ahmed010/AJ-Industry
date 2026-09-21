@@ -712,6 +712,8 @@ function MaterialsPage() {
 function AuthPage({ kind }: { kind: 'sign-in' | 'sign-up' }) {
   const Component = kind === 'sign-in' ? SignIn : SignUp;
   const { language } = useLanguage();
+  const [revokedNotice, setRevokedNotice] = useState(() => safeStorage.getItem('aj_revoked_notice') === 'true');
+
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center bg-background px-4 py-10">
       <div className="mx-auto mb-6 flex w-full max-w-[440px] items-center justify-between">
@@ -721,11 +723,41 @@ function AuthPage({ kind }: { kind: 'sign-in' | 'sign-up' }) {
           <span className="grid size-9 place-items-center border border-primary/50 bg-primary/10 font-code text-xs font-bold text-primary">AJ</span>
         </Link>
       </div>
-      <Component
-        routing="path"
-        path={`${basePath}/${kind}`}
-        {...(kind === 'sign-in' ? { signUpUrl: `${basePath}/sign-up` } : { signInUrl: `${basePath}/sign-in` })}
-      />
+
+      {revokedNotice && (
+        <div className="mx-auto mb-5 w-full max-w-[440px] rounded-lg border border-destructive/60 bg-destructive/15 p-4 text-xs text-destructive-foreground">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <span>
+                {display(
+                  language,
+                  'تم إلغاء تفعيل هذا الحساب وحذفه من قبل إدارة المصنع. لا يمكن تسجيل الدخول به.',
+                  'This account has been revoked and removed by the administration. Access is blocked.'
+                )}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                safeStorage.removeItem('aj_revoked_notice');
+                setRevokedNotice(false);
+              }}
+              className="text-xs font-bold hover:underline"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto w-full max-w-[440px]">
+        <Component
+          routing="path"
+          path={`${basePath}/${kind}`}
+          {...(kind === 'sign-in' ? { signUpUrl: `${basePath}/sign-up` } : { signInUrl: `${basePath}/sign-in` })}
+        />
+      </div>
     </div>
   );
 }
@@ -769,11 +801,22 @@ function ClerkAuthTokenBridge() {
 
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
+  const { userId } = useAuth();
   const previousUserId = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (previousUserId.current !== undefined && previousUserId.current !== userId) {
+      queryClient.clear();
+    }
+    previousUserId.current = userId;
+  }, [userId]);
+
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
       const nextUserId = user?.id ?? null;
-      if (previousUserId.current !== undefined && previousUserId.current !== nextUserId) queryClient.clear();
+      if (previousUserId.current !== undefined && previousUserId.current !== nextUserId) {
+        queryClient.clear();
+      }
       previousUserId.current = nextUserId;
     });
     return unsubscribe;
@@ -782,14 +825,81 @@ function ClerkQueryClientCacheInvalidator() {
 }
 
 function ClientAccountProvisioner() {
-  const { isLoaded, isSignedIn, user } = useAuth();
-  useGetClientProfile({
+  const { isLoaded, isSignedIn, user, getToken } = useAuth();
+  const { signOut } = useClerk();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user && user.role !== 'admin') {
+      let active = true;
+      const syncProfile = async () => {
+        try {
+          const token = await getToken();
+          const res = await fetch('/api/client/sync-profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              'x-client-user-id': user.id,
+              'x-client-email': user.email || '',
+              'x-client-name': encodeURIComponent(user.name || ''),
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              email: user.email,
+              name: user.name,
+              company: user.company,
+            }),
+          });
+
+          if (!active) return;
+
+          if (res.status === 403) {
+            const data = await res.json().catch(() => ({}));
+            if (data.revoked || data.error === 'ACCOUNT_REVOKED') {
+              safeStorage.setItem('aj_revoked_notice', 'true');
+              safeStorage.removeItem('aj_auth_token');
+              safeStorage.removeItem('aj_user_session');
+              try {
+                await signOut();
+              } catch {}
+              queryClient.clear();
+              window.location.href = '/sign-in';
+            }
+          }
+        } catch {}
+      };
+      syncProfile();
+      return () => {
+        active = false;
+      };
+    }
+  }, [isLoaded, isSignedIn, user?.id, user?.email, user?.name, user?.company, user?.role, getToken, signOut]);
+
+  const profileQuery = useGetClientProfile({
     query: {
       enabled: isLoaded && Boolean(isSignedIn) && user?.role !== 'admin',
       staleTime: 60_000,
       queryKey: getGetClientProfileQueryKey(),
+      retry: false,
     },
   });
+
+  useEffect(() => {
+    if (profileQuery.isError) {
+      const err: any = profileQuery.error;
+      const status = err?.status || err?.response?.status;
+      if (status === 403) {
+        safeStorage.setItem('aj_revoked_notice', 'true');
+        safeStorage.removeItem('aj_auth_token');
+        safeStorage.removeItem('aj_user_session');
+        void signOut().finally(() => {
+          queryClient.clear();
+          window.location.href = '/sign-in';
+        });
+      }
+    }
+  }, [profileQuery.isError, profileQuery.error, signOut]);
+
   return null;
 }
 

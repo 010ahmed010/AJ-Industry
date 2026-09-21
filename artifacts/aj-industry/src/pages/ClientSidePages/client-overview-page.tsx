@@ -27,6 +27,7 @@ function requestStageLabel(language: 'ar' | 'en', status: ClientRequest['status'
     quoted: ['تم التسعير', 'Quoted'],
     scheduled: ['مجدول', 'Scheduled'],
     completed: ['مكتمل', 'Completed'],
+    suspended: ['معلّق مؤقتاً', 'Suspended'],
   };
   return labels[status]?.[language === 'ar' ? 0 : 1] || status;
 }
@@ -141,6 +142,8 @@ export function ClientOverviewPage() {
                               ? 'green'
                               : request.status === 'submitted'
                               ? 'amber'
+                              : request.status === 'suspended'
+                              ? 'amber'
                               : 'blue'
                           }
                         >
@@ -187,6 +190,12 @@ export function ClientOverviewPage() {
       <div className="border border-emerald-500/40 bg-emerald-500/10 p-4">
         <p className="font-code text-[10px] tracking-wider text-emerald-400 font-bold uppercase">{clientText(language, 'ملاحظات وتوجيهات الفريق الهندسي', 'ENGINEERING NOTES & GUIDANCE')}</p>
         <p className="mt-2 text-sm leading-relaxed text-foreground whitespace-pre-wrap">{selectedRequest.adminFeedback}</p>
+      </div>
+    )}
+    {selectedRequest.status === 'suspended' && (
+      <div className="border border-amber-500/40 bg-amber-500/10 p-4">
+        <p className="font-code text-[10px] tracking-wider text-amber-400 font-bold uppercase">{clientText(language, 'تنبيه: الطلب معلّق مؤقتاً', 'STATUS: TEMPORARILY SUSPENDED')}</p>
+        <p className="mt-1 text-xs leading-relaxed text-foreground/90">{clientText(language, 'تم تعليق هذا الطلب مؤقتاً لمراجعة المتطلبات الهندسية مع العميل. بإمكانك التواصل مع الفريق أو حذف المسودة.', 'This request is temporarily paused by engineering for requirements review. You can reach out to support or remove the draft.')}</p>
       </div>
     )}
     <div><p className="font-code text-[9px] tracking-[.18em] text-primary">{clientText(language, 'رحلة الطلب', 'REQUEST JOURNEY')}</p><div className="mt-4 grid gap-3">{requestStages.map((stage, index) => { const currentIndex = requestStages.indexOf(selectedRequest.status); const reached = index <= currentIndex; return <div key={stage} className="flex items-center gap-3"><span className={`grid size-7 place-items-center rounded-full border font-code text-[9px] ${reached ? 'border-primary bg-primary/15 text-primary' : 'border-border text-muted-foreground'}`}>{reached ? '✓' : String(index + 1).padStart(2, '0')}</span><span className={`text-sm ${reached ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{requestStageLabel(language, stage)}</span>{stage === selectedRequest.status && <Tag tone={selectedRequest.status === 'completed' ? 'green' : 'blue'}>{clientText(language, 'الحالة الحالية', 'CURRENT')}</Tag>}</div>; })}</div></div><div className="grid gap-3 border-t border-border pt-5 sm:grid-cols-2"><div><p className="font-code text-[9px] text-muted-foreground">{clientText(language, 'المادة', 'MATERIAL')}</p><p className="mt-1 text-sm font-semibold">{selectedRequest.material}</p></div><div><p className="font-code text-[9px] text-muted-foreground">{clientText(language, 'الكمية', 'QUANTITY')}</p><p className="mt-1 text-sm font-semibold">{selectedRequest.quantity} {clientText(language, 'قطعة', 'units')}</p></div><div><p className="font-code text-[9px] text-muted-foreground">{clientText(language, 'التشطيب', 'FINISH')}</p><p className="mt-1 text-sm font-semibold">{selectedRequest.finish}</p></div><div><p className="font-code text-[9px] text-muted-foreground">{clientText(language, 'الجدول', 'TIMELINE')}</p><p className="mt-1 text-sm font-semibold">{selectedRequest.timeline}</p></div></div><div className="border-t border-border pt-5"><p className="font-code text-[9px] text-muted-foreground">{clientText(language, 'الملاحظات الهندسية المقدمة من طرفك', 'YOUR SUBMITTED SPECIFICATIONS')}</p><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{selectedRequest.notes || clientText(language, 'لا توجد ملاحظات إضافية.', 'No additional notes.')}</p></div></div></section></div>}

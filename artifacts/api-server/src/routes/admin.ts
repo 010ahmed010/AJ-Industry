@@ -40,6 +40,83 @@ async function checkAdminAccess(req: Request): Promise<boolean> {
   return true;
 }
 
+// Helper to retrieve effective Clerk secret key (from MongoDB appSettings or environment)
+async function getEffectiveClerkSecretKey(): Promise<string | null> {
+  try {
+    const db = await getMongoDb();
+    const setting = await db.collection("appSettings").findOne({ key: "clerkSecretKey" });
+    if (setting?.value && typeof setting.value === "string" && setting.value.trim().startsWith("sk_")) {
+      return setting.value.trim();
+    }
+  } catch {}
+
+  const envKey = process.env.CLERK_SECRET_KEY?.trim();
+  if (envKey && (envKey.startsWith("sk_test_") || envKey.startsWith("sk_live_"))) {
+    return envKey;
+  }
+  return null;
+}
+
+// Helper to reliably delete a user from Clerk's servers via REST API
+async function deleteUserFromClerk(
+  userIdOrEmail: string,
+  secretKey: string
+): Promise<{ success: boolean; message: string; clerkUserId?: string }> {
+  try {
+    let targetClerkId: string | null = null;
+    const clean = userIdOrEmail.trim().toLowerCase();
+
+    if (clean.startsWith("user_")) {
+      targetClerkId = clean;
+    } else if (clean.includes("@")) {
+      // Look up user by email address in Clerk API
+      try {
+        const searchRes = await fetch(
+          `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(clean)}`,
+          { headers: { Authorization: `Bearer ${secretKey}` } }
+        );
+        if (searchRes.ok) {
+          const users = await searchRes.json();
+          if (Array.isArray(users) && users.length > 0) {
+            targetClerkId = users[0].id;
+          }
+        }
+      } catch (lookupErr: any) {
+        console.warn("Clerk user lookup error:", lookupErr?.message);
+      }
+    }
+
+    if (!targetClerkId && !clean.startsWith("user_")) {
+      return {
+        success: false,
+        message: `لم يتم العثور على حساب في خوادم Clerk مطابق لـ (${userIdOrEmail}) أو تم حذفه مسبقاً.`,
+      };
+    }
+
+    const deleteTarget = targetClerkId || clean;
+    const delRes = await fetch(`https://api.clerk.com/v1/users/${deleteTarget}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${secretKey}` },
+    });
+
+    if (delRes.ok) {
+      return {
+        success: true,
+        message: `تم حذف الحساب نهائياً من خوادم Clerk (${deleteTarget})`,
+        clerkUserId: deleteTarget,
+      };
+    } else {
+      const errBody = await delRes.text();
+      return {
+        success: false,
+        message: `رفضت Clerk طلب الحذف (${delRes.status}): ${errBody}`,
+      };
+    }
+  } catch (err: any) {
+    return { success: false, message: `تعذر الاتصال بخوادم Clerk: ${err?.message}` };
+  }
+}
+
 // GET /api/admin/overview - Aggregated metrics and live summary
 router.get("/admin/overview", async (req: Request, res: Response): Promise<void> => {
   if (!checkAdminAccess(req)) {
@@ -176,11 +253,15 @@ router.get("/admin/requests", async (req: Request, res: Response): Promise<void>
     }
 
     const requests = await requestsColl.find(query).sort({ createdAt: -1 }).toArray();
-    const profiles = await profilesColl.find({}).toArray();
+    const [profiles, users] = await Promise.all([
+      profilesColl.find({}).toArray(),
+      db.collection("users").find({}).toArray(),
+    ]);
     const profileMap = new Map(profiles.map((p) => [p.userId, p]));
+    const userMap = new Map(users.map((u) => [u._id, u]));
 
     let items = requests.map((r) => {
-      const client = profileMap.get(r.userId);
+      const client = profileMap.get(r.userId) || userMap.get(r.userId);
       return {
         id: r._id,
         reference: r.reference,
@@ -203,8 +284,8 @@ router.get("/admin/requests", async (req: Request, res: Response): Promise<void>
         adminUpdatedAt: r.adminUpdatedAt,
         createdAt: r.createdAt,
         client: client
-          ? { name: client.name, email: client.email, company: client.company }
-          : { name: "عميل", email: "client@aj-industry.com", company: "" },
+          ? { name: client.name || "عميل", email: client.email || "", company: client.company || "" }
+          : { name: "عميل", email: "", company: "" },
       };
     });
 
@@ -318,11 +399,15 @@ router.get("/admin/consultations", async (req: Request, res: Response): Promise<
     }
 
     const consultations = await consultationsColl.find(query).sort({ createdAt: -1 }).toArray();
-    const profiles = await profilesColl.find({}).toArray();
+    const [profiles, users] = await Promise.all([
+      profilesColl.find({}).toArray(),
+      db.collection("users").find({}).toArray(),
+    ]);
     const profileMap = new Map(profiles.map((p) => [p.userId, p]));
+    const userMap = new Map(users.map((u) => [u._id, u]));
 
     const items = consultations.map((c) => {
-      const client = profileMap.get(c.userId);
+      const client = profileMap.get(c.userId) || userMap.get(c.userId);
       return {
         id: c._id,
         reference: c.reference,
@@ -342,8 +427,8 @@ router.get("/admin/consultations", async (req: Request, res: Response): Promise<
         adminUpdatedAt: c.adminUpdatedAt,
         createdAt: c.createdAt,
         client: client
-          ? { name: client.name, email: client.email, company: client.company }
-          : { name: "عميل", email: "client@aj-industry.com", company: "" },
+          ? { name: client.name || "عميل", email: client.email || "", company: client.company || "" }
+          : { name: "عميل", email: "", company: "" },
       };
     });
 
@@ -489,30 +574,66 @@ router.get("/admin/clients", async (req: Request, res: Response): Promise<void> 
     const adminEmails = new Set(adminUsers.map((u) => String(u.email).toLowerCase()));
     adminEmails.add("admin@aj-industry.com");
 
-    // Strictly filter out any admin profiles
+    // Strictly filter out any admin profiles or legacy demo users
     const clientProfilesOnly = profiles.filter(
       (p) =>
         !adminIds.has(String(p.userId)) &&
         !adminEmails.has(String(p.email).toLowerCase()) &&
+        p.userId !== "demo_client_user" &&
+        p.email?.toLowerCase() !== "client@aj-industry.com" &&
         !p.name?.includes("المهندس المسؤول") &&
         !p.name?.includes("المدير")
     );
+
+    const usersColl = db.collection("users");
+    const clientUsers = await usersColl.find({ role: "client" }).toArray();
+    const userMap = new Map(clientUsers.map((u) => [String(u._id), u]));
 
     // Strictly deduplicate by userId to ensure distinct client entries
     const uniqueProfilesMap = new Map<string, any>();
     for (const p of clientProfilesOnly) {
       const uId = String(p.userId || p._id);
+      const matchedUser = userMap.get(uId);
+      const enhanced = {
+        ...p,
+        email: p.email || matchedUser?.email || "",
+        name: p.name || matchedUser?.name || "عميل AJ",
+        company: p.company || matchedUser?.company || "",
+      };
+
       if (!uniqueProfilesMap.has(uId)) {
-        uniqueProfilesMap.set(uId, p);
+        uniqueProfilesMap.set(uId, enhanced);
       } else {
         const prev = uniqueProfilesMap.get(uId);
         const prevTime = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
         const curTime = new Date(p.updatedAt || p.createdAt || 0).getTime();
         if (curTime > prevTime) {
-          uniqueProfilesMap.set(uId, p);
+          uniqueProfilesMap.set(uId, enhanced);
         }
       }
     }
+
+    // Also include any client users that might not have a clientProfile yet
+    for (const u of clientUsers) {
+      const uId = String(u._id);
+      if (
+        !uniqueProfilesMap.has(uId) &&
+        !adminIds.has(uId) &&
+        !adminEmails.has(String(u.email).toLowerCase()) &&
+        uId !== "demo_client_user" &&
+        u.email?.toLowerCase() !== "client@aj-industry.com"
+      ) {
+        uniqueProfilesMap.set(uId, {
+          userId: uId,
+          name: u.name || "عميل AJ",
+          email: u.email || "",
+          company: u.company || "",
+          createdAt: u.createdAt || new Date(),
+          updatedAt: u.updatedAt || new Date(),
+        });
+      }
+    }
+
     const deduplicatedProfiles = Array.from(uniqueProfilesMap.values());
 
     const clientsWithStats = deduplicatedProfiles.map((p) => {
@@ -559,6 +680,7 @@ router.delete(["/admin/clients/:userId", "/api/admin/clients/:userId"], async (r
     const sessionsColl = db.collection("sessions");
     const requestsColl = db.collection("clientRequests");
     const consultationsColl = db.collection("clientConsultations");
+    const revokedColl = db.collection("revokedClients");
 
     // Look up client in profiles and users
     const [profile, user] = await Promise.all([
@@ -584,7 +706,30 @@ router.delete(["/admin/clients/:userId", "/api/admin/clients/:userId"], async (r
     }
 
     // -------------------------------------------------------------
-    // Step 1: Delete client account & credentials from Clerk
+    // Step 1: Record permanent revocation in MongoDB
+    // -------------------------------------------------------------
+    const revokeOrList: any[] = [{ userId }];
+    if (targetEmail) {
+      revokeOrList.push({ email: targetEmail });
+    }
+    await revokedColl.updateOne(
+      { $or: revokeOrList },
+      {
+        $set: {
+          userId,
+          email: targetEmail,
+          name: targetName,
+          status: "revoked",
+          reason: "Deleted by administrator",
+          revokedAt: new Date(),
+          revokedBy: "admin",
+        },
+      },
+      { upsert: true }
+    );
+
+    // -------------------------------------------------------------
+    // Step 2: Delete client account & credentials from Clerk (if valid sk_ key available)
     // -------------------------------------------------------------
     const clerkStatus = {
       attempted: false,
@@ -593,54 +738,23 @@ router.delete(["/admin/clients/:userId", "/api/admin/clients/:userId"], async (r
       message: "",
     };
 
-    if (process.env.CLERK_SECRET_KEY) {
+    const effectiveClerkKey = await getEffectiveClerkSecretKey();
+
+    if (effectiveClerkKey) {
       clerkStatus.attempted = true;
-      try {
-        const { clerkClient } = await import("@clerk/express");
-
-        let resolvedClerkId: string | null = null;
-        if (userId.startsWith("user_")) {
-          resolvedClerkId = userId;
-        } else if (user?.clerkId && typeof user.clerkId === "string" && user.clerkId.startsWith("user_")) {
-          resolvedClerkId = user.clerkId;
-        } else if (targetEmail) {
-          try {
-            const clerkUsers = await clerkClient.users.getUserList({
-              emailAddress: [targetEmail],
-            });
-            if (clerkUsers.data && clerkUsers.data.length > 0) {
-              resolvedClerkId = clerkUsers.data[0].id;
-            }
-          } catch (lookupErr: any) {
-            console.warn("Clerk email lookup note:", lookupErr?.message);
-          }
-        }
-
-        if (resolvedClerkId) {
-          await clerkClient.users.deleteUser(resolvedClerkId);
-          clerkStatus.deleted = true;
-          clerkStatus.clerkUserId = resolvedClerkId;
-          clerkStatus.message = `Successfully deleted Clerk user (${resolvedClerkId})`;
-        } else {
-          try {
-            await clerkClient.users.deleteUser(userId);
-            clerkStatus.deleted = true;
-            clerkStatus.clerkUserId = userId;
-            clerkStatus.message = `Deleted user (${userId}) from Clerk`;
-          } catch (directErr: any) {
-            clerkStatus.message = `Client was not found in Clerk or was a local profile: ${directErr?.message || "Not found"}`;
-          }
-        }
-      } catch (clerkErr: any) {
-        console.warn("Clerk deletion error:", clerkErr?.message);
-        clerkStatus.message = clerkErr?.message || "Failed to remove user from Clerk";
-      }
+      const clerkTarget = user?.clerkId || (userId.startsWith("user_") ? userId : (targetEmail || userId));
+      const clerkResult = await deleteUserFromClerk(clerkTarget, effectiveClerkKey);
+      clerkStatus.deleted = clerkResult.success;
+      clerkStatus.clerkUserId = clerkResult.clerkUserId || null;
+      clerkStatus.message = clerkResult.message;
     } else {
-      clerkStatus.message = "CLERK_SECRET_KEY not set; Clerk API call bypassed";
+      clerkStatus.attempted = false;
+      clerkStatus.deleted = false;
+      clerkStatus.message = "لم يتم الحذف من خوادم Clerk لعدم توفر مفتاح Secret Key صالح (sk_test_...). تم حذف الحساب وتطهير بياناته بالكامل من MongoDB.";
     }
 
     // -------------------------------------------------------------
-    // Step 2: Delete client credentials & data from MongoDB
+    // Step 3: Delete client credentials & data from MongoDB
     // -------------------------------------------------------------
     const deleteAssociated = req.query.deleteAssociated !== "false" && req.body?.deleteAssociated !== false;
 
@@ -694,8 +808,12 @@ router.delete(["/admin/clients/:userId", "/api/admin/clients/:userId"], async (r
 
     res.json({
       success: true,
-      message: "Client account deleted successfully from MongoDB and Clerk",
-      messageAr: "تم حذف حساب العميل وبيانات اعتماده بنجاح من MongoDB و Clerk",
+      message: clerkStatus.deleted
+        ? "Client account deleted successfully from MongoDB and Clerk"
+        : "Client account deleted from MongoDB (Clerk cloud deletion requires valid Secret Key)",
+      messageAr: clerkStatus.deleted
+        ? "تم حذف حساب العميل بنجاح من قاعدة البيانات وخوادم Clerk معاً."
+        : "تم حذف وتطهير حساب العميل من قاعدة البيانات بنجاح (الحذف من خوادم Clerk يتطلب توفير مفتاح الربط الصالح).",
       deletedUserId: userId,
       clerk: clerkStatus,
       mongodb: {
@@ -713,6 +831,161 @@ router.delete(["/admin/clients/:userId", "/api/admin/clients/:userId"], async (r
       details: err?.message,
     });
   }
+});
+
+// GET /api/admin/clerk-status - Get live Clerk integration & secret key connection status
+router.get("/admin/clerk-status", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const effectiveKey = await getEffectiveClerkSecretKey();
+  const publishableKey = (process.env.CLERK_PUBLISHABLE_KEY || process.env.VITE_CLERK_PUBLISHABLE_KEY || "").trim();
+
+  if (!effectiveKey) {
+    res.json({
+      configured: false,
+      valid: false,
+      publishableKey: publishableKey ? `${publishableKey.slice(0, 16)}...` : "",
+      message: "مفتاح Clerk Secret Key غير مهيأ بصيغة صالحة (يجب أن يبدأ بـ sk_test_ أو sk_live_). الحذف التلقائي من خوادم Clerk السحابية معطل حتى يتم توفير المفتاح.",
+      messageEn: "Clerk Secret Key missing or invalid. Automated Clerk cloud deletion is disabled until a valid key is provided.",
+    });
+    return;
+  }
+
+  try {
+    const testRes = await fetch("https://api.clerk.com/v1/users?limit=1", {
+      headers: { Authorization: `Bearer ${effectiveKey}` },
+    });
+    if (testRes.ok) {
+      res.json({
+        configured: true,
+        valid: true,
+        publishableKey: publishableKey ? `${publishableKey.slice(0, 16)}...` : "",
+        keyPrefix: `${effectiveKey.slice(0, 12)}...`,
+        message: "متصل وخوادم Clerk جاهزة للحذف والإدارة المباشرة بنجاح.",
+        messageEn: "Connected. Clerk servers are verified and ready for automated deletion and sync.",
+      });
+    } else {
+      const errText = await testRes.text();
+      res.json({
+        configured: true,
+        valid: false,
+        publishableKey: publishableKey ? `${publishableKey.slice(0, 16)}...` : "",
+        keyPrefix: `${effectiveKey.slice(0, 12)}...`,
+        message: `تم رفض مفتاح Clerk من خوادم Clerk (${testRes.status}): يرجى نسخه بشكل كامل من dashboard.clerk.com`,
+        messageEn: `Clerk API rejected the secret key (${testRes.status}).`,
+        details: errText,
+      });
+    }
+  } catch (err: any) {
+    res.json({
+      configured: true,
+      valid: false,
+      message: `تعذر الاتصال بـ Clerk: ${err?.message}`,
+    });
+  }
+});
+
+// POST /api/admin/clerk-config - Update Clerk Secret Key dynamically in MongoDB
+router.post("/admin/clerk-config", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const { secretKey } = req.body || {};
+  if (!secretKey || typeof secretKey !== "string") {
+    res.status(400).json({ error: "Secret key string is required" });
+    return;
+  }
+
+  const cleanKey = secretKey.trim();
+  if (!cleanKey.startsWith("sk_test_") && !cleanKey.startsWith("sk_live_")) {
+    res.status(400).json({
+      error: "صيغة المفتاح غير صحيحة. يجب أن يبدأ بـ sk_test_ أو sk_live_ من لوحة تحكم Clerk.",
+    });
+    return;
+  }
+
+  // Test against Clerk API first
+  try {
+    const testRes = await fetch("https://api.clerk.com/v1/users?limit=1", {
+      headers: { Authorization: `Bearer ${cleanKey}` },
+    });
+    if (!testRes.ok) {
+      const errText = await testRes.text();
+      res.status(400).json({
+        error: `رفضت Clerk هذا المفتاح (${testRes.status}). يرجى التأكد من نسخه بشكل دقيق من dashboard.clerk.com -> API Keys.`,
+        details: errText,
+      });
+      return;
+    }
+
+    const db = await getMongoDb();
+    await db.collection("appSettings").updateOne(
+      { key: "clerkSecretKey" },
+      { $set: { key: "clerkSecretKey", value: cleanKey, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    process.env.CLERK_SECRET_KEY = cleanKey;
+
+    res.json({
+      success: true,
+      message: "تم حفظ واختبار مفتاح Clerk بنجاح! الآن أي حذف للعميل سيتم تلقائياً في MongoDB و Clerk معاً.",
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "فشل اختبار المفتاح مع خوادم Clerk", details: err?.message });
+  }
+});
+
+// POST /api/admin/clerk-purge-user - Direct purge of user from Clerk servers by email or userId
+router.post("/admin/clerk-purge-user", async (req: Request, res: Response): Promise<void> => {
+  if (!(await checkAdminAccess(req))) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const { email, userId } = req.body || {};
+  const target = (email || userId || "").trim();
+  if (!target) {
+    res.status(400).json({ error: "يرجى إدخال البريد الإلكتروني أو معرّف المستخدم / Email or userId required" });
+    return;
+  }
+
+  const cleanEmail = target.toLowerCase();
+  const db = await getMongoDb();
+
+  // Purge completely from MongoDB local database
+  await Promise.all([
+    db.collection("clientProfiles").deleteMany({ $or: [{ email: cleanEmail }, { userId: target }] }),
+    db.collection("users").deleteMany({ $or: [{ email: cleanEmail }, { _id: target }, { clerkId: target }] }),
+    db.collection("sessions").deleteMany({ $or: [{ email: cleanEmail }, { userId: target }] }),
+    db.collection("revokedClients").deleteMany({ $or: [{ email: cleanEmail }, { userId: target }] }),
+  ]);
+
+  const effectiveKey = await getEffectiveClerkSecretKey();
+  if (!effectiveKey) {
+    res.json({
+      success: false,
+      mongodbCleaned: true,
+      clerkCleaned: false,
+      target: cleanEmail,
+      message: `تم تنظيف وتطهير الحساب بالكامل من قاعدة بيانات الموقع (MongoDB). ولكن تعذر الحذف من خوادم Clerk السحابية لعدم توفر مفتاح Secret Key صالح (sk_test_...). يمكنك حذف الحساب يدوياً من dashboard.clerk.com -> Users -> ابحث عن ${cleanEmail} واضغط Delete User، أو قم بتهيئة المفتاح في لوحة التحكم.`,
+    });
+    return;
+  }
+
+  const clerkResult = await deleteUserFromClerk(target, effectiveKey);
+  res.json({
+    success: clerkResult.success,
+    mongodbCleaned: true,
+    clerkCleaned: clerkResult.success,
+    target: cleanEmail,
+    message: clerkResult.message,
+    details: clerkResult,
+  });
 });
 
 // ==========================================
