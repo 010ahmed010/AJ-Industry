@@ -138,7 +138,8 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
   const filterTabs = [
     { key: 'all', labelAr: 'الكل', labelEn: 'All' },
     { key: 'submitted', labelAr: 'جديد / استلام', labelEn: 'Submitted' },
-    { key: 'reviewing', labelAr: 'قيد الدراسة', labelEn: 'Reviewing' },
+    { key: 'reviewing', labelAr: 'قيد الدراسة', labelEn: 'Review' },
+    { key: 'in_queue', labelAr: 'في طابور الجدولة', labelEn: 'In Queue' },
     { key: 'contacted', labelAr: 'تم التواصل', labelEn: 'Contacted' },
     { key: 'completed', labelAr: 'منجز', labelEn: 'Completed' },
     { key: 'suspended', labelAr: 'معلّق مؤقتاً', labelEn: 'Suspended' },
@@ -422,6 +423,7 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
                 >
                   <option value="submitted">{adminText(language, 'تم الاستلام (Submitted)', 'Submitted')}</option>
                   <option value="reviewing">{adminText(language, 'قيد المراجعة والتحضير (Reviewing)', 'Reviewing')}</option>
+                  <option value="in_queue">{adminText(language, 'في طابور الجدولة (In Queue)', 'In Queue')}</option>
                   <option value="contacted">{adminText(language, 'تم التواصل والجدولة (Contacted)', 'Contacted & Scheduled')}</option>
                   <option value="completed">{adminText(language, 'تم إنجاز الاستشارة (Completed)', 'Completed')}</option>
                   <option value="suspended">{adminText(language, 'معلّق مؤقتاً (Suspended)', 'Suspended / On-Hold')}</option>

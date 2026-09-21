@@ -33,13 +33,17 @@ import {
 type PrintForm = { projectName: string; material: string; finish: string; quantity: string; timeline: string; notes: string };
 const initialForm: PrintForm = { projectName: '', material: 'PETG-CF', finish: 'functional', quantity: '1', timeline: 'standard', notes: '' };
 
-function requestStatus(language: 'ar' | 'en', status: string) {
+function requestStatus(language: 'ar' | 'en', status: string, request?: ClientRequest) {
+  if (language === 'ar' && request?.statusAr) return request.statusAr;
+  if (language === 'en' && request?.statusEn) return request.statusEn;
   const labels: Record<string, [string, string]> = {
     submitted: ['تم الاستلام', 'Received'],
-    reviewing: ['قيد المراجعة', 'Under review'],
+    reviewing: ['قيد المراجعة الهندسية', 'Under Engineering Review'],
     quoted: ['تم التسعير', 'Quoted'],
-    scheduled: ['مجدول', 'Scheduled'],
-    completed: ['مكتمل', 'Completed'],
+    in_queue: ['في طابور التنفيذ والجدولة', 'In Queue'],
+    inqueued: ['في طابور التنفيذ والجدولة', 'In Queue'],
+    scheduled: ['مجدول للإنتاج', 'Scheduled for Production'],
+    completed: ['مكتمل وجاهز للتسليم', 'Completed'],
     suspended: ['معلّق مؤقتاً', 'Suspended'],
   };
   return labels[status]?.[language === 'ar' ? 0 : 1] ?? status;
@@ -226,10 +230,12 @@ function SavedPrintRequests({
                           ? 'amber'
                           : request.status === 'suspended'
                           ? 'amber'
+                          : request.status === 'quoted'
+                          ? 'green'
                           : 'blue'
                       }
                     >
-                      {requestStatus(language, request.status)}
+                      {requestStatus(language, request.status, request)}
                     </Tag>
                     <p className="mt-2.5 font-display text-lg font-bold text-foreground">
                       {request.projectName}
@@ -239,6 +245,15 @@ function SavedPrintRequests({
                     {request.reference}
                   </span>
                 </div>
+
+                {request.status === 'suspended' && (
+                  <div className="mt-3 border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                    <p className="font-bold flex items-center gap-1.5 text-amber-300">
+                      <AlertTriangle className="size-4 shrink-0 text-amber-400" />
+                      <span>{clientText(language, 'الطلب معلّق مؤقتاً لمراجعة المتطلبات مع الإدارة الهندسية', 'Order temporarily on-hold by engineering team')}</span>
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-3.5 grid gap-2 border-t border-border/70 pt-3.5 text-xs text-muted-foreground sm:grid-cols-2">
                   <span>

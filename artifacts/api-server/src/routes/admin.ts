@@ -14,11 +14,13 @@ const router: IRouter = Router();
 
 const statusLabels: Record<string, { ar: string; en: string }> = {
   submitted: { ar: "تم الاستلام", en: "Received" },
-  reviewing: { ar: "قيد المراجعة الهندسية", en: "Engineering review" },
+  reviewing: { ar: "قيد المراجعة الهندسية", en: "Under Engineering Review" },
   quoted: { ar: "تم التسعير", en: "Quoted" },
+  in_queue: { ar: "في طابور الإنتاج / الجدولة", en: "In Queue" },
+  inqueued: { ar: "في طابور الإنتاج / الجدولة", en: "In Queue" },
   scheduled: { ar: "مجدول للإنتاج", en: "Scheduled for production" },
+  contacted: { ar: "تم التواصل وتحديد الموعد", en: "Contacted & Scheduled" },
   completed: { ar: "مكتمل وجاهز للتسليم", en: "Completed" },
-  contacted: { ar: "تم التواصل وتحديد الموعد", en: "Contacted" },
   suspended: { ar: "معلّق مؤقتاً", en: "Suspended" },
   new: { ar: "جديد", en: "New" },
   archived: { ar: "مؤرشف", en: "Archived" },
@@ -66,7 +68,8 @@ router.get("/admin/overview", async (req: Request, res: Response): Promise<void>
       submitted: allRequests.filter((r) => r.status === "submitted").length,
       reviewing: allRequests.filter((r) => r.status === "reviewing").length,
       quoted: allRequests.filter((r) => r.status === "quoted").length,
-      scheduled: allRequests.filter((r) => r.status === "scheduled").length,
+      scheduled: allRequests.filter((r) => r.status === "scheduled" || r.status === "in_queue" || r.status === "inqueued").length,
+      in_queue: allRequests.filter((r) => r.status === "in_queue" || r.status === "inqueued" || r.status === "scheduled").length,
       completed: allRequests.filter((r) => r.status === "completed").length,
       suspended: allRequests.filter((r) => r.status === "suspended").length,
     };
@@ -75,6 +78,7 @@ router.get("/admin/overview", async (req: Request, res: Response): Promise<void>
       total: allConsultations.length,
       submitted: allConsultations.filter((c) => c.status === "submitted").length,
       reviewing: allConsultations.filter((c) => c.status === "reviewing").length,
+      in_queue: allConsultations.filter((c) => c.status === "in_queue" || c.status === "inqueued").length,
       contacted: allConsultations.filter((c) => c.status === "contacted").length,
       completed: allConsultations.filter((c) => c.status === "completed").length,
       suspended: allConsultations.filter((c) => c.status === "suspended").length,

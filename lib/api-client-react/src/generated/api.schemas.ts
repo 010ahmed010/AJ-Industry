@@ -45,6 +45,8 @@ export const ClientRequestStatus = {
   submitted: 'submitted',
   reviewing: 'reviewing',
   quoted: 'quoted',
+  in_queue: 'in_queue',
+  inqueued: 'inqueued',
   scheduled: 'scheduled',
   completed: 'completed',
   suspended: 'suspended',
@@ -56,7 +58,7 @@ export interface ClientRequest {
   kind: ClientRequestKind;
   projectName: string;
   serviceSlug: string;
-  status: ClientRequestStatus;
+  status: ClientRequestStatus | string;
   statusAr: string;
   statusEn: string;
   material: string;
@@ -65,12 +67,18 @@ export interface ClientRequest {
   timeline: string;
   notes: string;
   fileName?: string;
+  quoteAmount?: number;
+  quoteCurrency?: string;
+  estimatedDelivery?: string;
+  adminFeedback?: string;
+  adminUpdatedAt?: string;
   createdAt: string;
 }
 
 export interface ClientOverview {
   profile: ClientProfile;
   requests: ClientRequest[];
+  consultations?: ClientConsultation[];
 }
 
 export interface CreateClientPrintRequestInput {
@@ -119,6 +127,8 @@ export type ClientConsultationStatus = typeof ClientConsultationStatus[keyof typ
 export const ClientConsultationStatus = {
   submitted: 'submitted',
   reviewing: 'reviewing',
+  in_queue: 'in_queue',
+  inqueued: 'inqueued',
   contacted: 'contacted',
   completed: 'completed',
   suspended: 'suspended',
@@ -137,14 +147,18 @@ export interface ClientConsultation {
   id: string;
   reference: string;
   kind: ClientConsultationKind;
-  status: ClientConsultationStatus;
+  status: ClientConsultationStatus | string;
   statusAr: string;
   statusEn: string;
   title: string;
   details: string;
   specialty?: string;
-  providerType?: ClientConsultationProviderType;
+  providerType?: ClientConsultationProviderType | string;
   preferredProvider?: string;
+  adminResponse?: string;
+  meetingScheduledAt?: string;
+  assignedSpecialist?: string;
+  adminUpdatedAt?: string;
   createdAt: string;
 }
 

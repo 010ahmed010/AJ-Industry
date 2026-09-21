@@ -133,8 +133,9 @@ export function AdminPrintingPage({ language }: { language: Language }) {
   const filterTabs = [
     { key: 'all', labelAr: 'الكل', labelEn: 'All' },
     { key: 'submitted', labelAr: 'تم الاستلام', labelEn: 'Submitted' },
-    { key: 'reviewing', labelAr: 'قيد المراجعة', labelEn: 'Reviewing' },
+    { key: 'reviewing', labelAr: 'قيد المراجعة', labelEn: 'Review' },
     { key: 'quoted', labelAr: 'تم التسعير', labelEn: 'Quoted' },
+    { key: 'in_queue', labelAr: 'طابور الإنتاج', labelEn: 'In Queue' },
     { key: 'scheduled', labelAr: 'مجدول للإنتاج', labelEn: 'Scheduled' },
     { key: 'completed', labelAr: 'مكتمل', labelEn: 'Completed' },
     { key: 'suspended', labelAr: 'معلّق مؤقتاً', labelEn: 'Suspended' },
@@ -445,6 +446,7 @@ export function AdminPrintingPage({ language }: { language: Language }) {
                   <option value="submitted">{adminText(language, 'تم الاستلام (Submitted)', 'Submitted / Received')}</option>
                   <option value="reviewing">{adminText(language, 'قيد المراجعة الهندسية (Reviewing)', 'Reviewing')}</option>
                   <option value="quoted">{adminText(language, 'تم التسعير (Quoted)', 'Quoted')}</option>
+                  <option value="in_queue">{adminText(language, 'طابور التنفيذ (In Queue)', 'In Queue')}</option>
                   <option value="scheduled">{adminText(language, 'مجدول للإنتاج (Scheduled)', 'Scheduled for production')}</option>
                   <option value="completed">{adminText(language, 'مكتمل وجاهز للتسليم (Completed)', 'Completed')}</option>
                   <option value="suspended">{adminText(language, 'معلّق مؤقتاً (Suspended)', 'Suspended / On-Hold')}</option>

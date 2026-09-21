@@ -44,7 +44,18 @@ const initialSpecialistForm: SpecialistForm = {
 };
 
 function statusLabel(language: 'ar' | 'en', consultation: ClientConsultation) {
-  return language === 'ar' ? consultation.statusAr : consultation.statusEn;
+  if (language === 'ar' && consultation.statusAr) return consultation.statusAr;
+  if (language === 'en' && consultation.statusEn) return consultation.statusEn;
+  const labels: Record<string, [string, string]> = {
+    submitted: ['تم الاستلام', 'Submitted'],
+    reviewing: ['قيد المراجعة والدراسة', 'Under Review'],
+    in_queue: ['في طابور الجدولة', 'In Queue'],
+    inqueued: ['في طابور الجدولة', 'In Queue'],
+    contacted: ['تم التواصل والجدولة', 'Contacted & Scheduled'],
+    completed: ['منجز', 'Completed'],
+    suspended: ['معلّق مؤقتاً', 'Suspended'],
+  };
+  return labels[consultation.status]?.[language === 'ar' ? 0 : 1] ?? consultation.status;
 }
 
 function kindLabel(language: 'ar' | 'en', kind: ClientConsultation['kind']) {
@@ -228,6 +239,8 @@ function ConsultationHistory({
                         tone={
                           consultation.status === 'completed'
                             ? 'green'
+                            : consultation.status === 'contacted'
+                            ? 'green'
                             : consultation.status === 'submitted'
                             ? 'amber'
                             : consultation.status === 'suspended'
@@ -237,10 +250,20 @@ function ConsultationHistory({
                       >
                         {statusLabel(language, consultation)}
                       </Tag>
-                      <span className="font-code text-[9px] text-muted-foreground font-semibold">
+                      <span className="font-code text-[9px] text-muted-foreground font-semibold font-mono">
                         {consultation.reference}
                       </span>
                     </div>
+
+                    {consultation.status === 'suspended' && (
+                      <div className="mt-2.5 border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                        <p className="font-bold flex items-center gap-1.5 text-amber-300">
+                          <AlertTriangle className="size-4 shrink-0 text-amber-400" />
+                          <span>{clientText(language, 'الاستشارة معلّقة مؤقتاً لمراجعة المتطلبات والتنسيق مع الإدارة الهندسية', 'Consultation temporarily suspended by engineering team')}</span>
+                        </p>
+                      </div>
+                    )}
+
                     <p className="mt-2 font-display text-lg font-bold">{consultation.title}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {kindLabel(language, consultation.kind)}

@@ -50,7 +50,7 @@ type ClientConsultationRecord = {
   userId: string;
   reference: string;
   kind: "consultation" | "specialist";
-  status: "submitted" | "reviewing" | "contacted" | "completed" | "suspended";
+  status: string;
   statusAr: string;
   statusEn: string;
   title: string;
@@ -59,6 +59,20 @@ type ClientConsultationRecord = {
   providerType?: "person" | "company" | "guide";
   preferredProvider?: string;
   createdAt: Date;
+};
+
+const statusLabels: Record<string, { ar: string; en: string }> = {
+  submitted: { ar: "تم الاستلام", en: "Received" },
+  reviewing: { ar: "قيد المراجعة والدراسة", en: "Under Review" },
+  quoted: { ar: "تم التسعير", en: "Quoted" },
+  in_queue: { ar: "في طابور الإنتاج / الجدولة", en: "In Queue" },
+  inqueued: { ar: "في طابور الإنتاج / الجدولة", en: "In Queue" },
+  scheduled: { ar: "مجدول للإنتاج", en: "Scheduled" },
+  contacted: { ar: "تم التواصل وتحديد الموعد", en: "Contacted & Scheduled" },
+  completed: { ar: "مكتمل وجاهز للتسليم", en: "Completed" },
+  suspended: { ar: "معلّق مؤقتاً", en: "Suspended" },
+  new: { ar: "جديد", en: "New" },
+  archived: { ar: "مؤرشف", en: "Archived" },
 };
 
 function decodeJwtSub(token: string): string | null {
@@ -158,15 +172,16 @@ function publicProfile(profile: ClientProfileRecord) {
 }
 
 function publicRequest(request: ClientRequestRecord & Record<string, any>) {
+  const st = request.status || "submitted";
   return {
     id: request._id,
     reference: request.reference,
-    kind: request.kind,
+    kind: request.kind || "print",
     projectName: request.projectName,
-    serviceSlug: request.serviceSlug,
-    status: request.status,
-    statusAr: request.statusAr,
-    statusEn: request.statusEn,
+    serviceSlug: request.serviceSlug || "print-3d",
+    status: st,
+    statusAr: request.statusAr || statusLabels[st]?.ar || st,
+    statusEn: request.statusEn || statusLabels[st]?.en || st,
     material: request.material,
     finish: request.finish,
     quantity: request.quantity,
@@ -182,13 +197,14 @@ function publicRequest(request: ClientRequestRecord & Record<string, any>) {
 }
 
 function publicConsultation(consultation: ClientConsultationRecord & Record<string, any>) {
+  const st = consultation.status || "submitted";
   return {
     id: consultation._id,
     reference: consultation.reference,
     kind: consultation.kind,
-    status: consultation.status,
-    statusAr: consultation.statusAr,
-    statusEn: consultation.statusEn,
+    status: st,
+    statusAr: consultation.statusAr || statusLabels[st]?.ar || st,
+    statusEn: consultation.statusEn || statusLabels[st]?.en || st,
     title: consultation.title,
     details: consultation.details,
     ...(consultation.specialty ? { specialty: consultation.specialty } : {}),
@@ -324,21 +340,31 @@ router.get("/client/overview", async (req, res): Promise<void> => {
   if (!userId) return;
 
   try {
-    const [profile, requests] = await Promise.all([
-      loadOrCreateProfile(userId),
-      (async () => {
-        const db = await getMongoDb();
-        return db
-          .collection<ClientRequestRecord>("clientRequests")
-          .find({ userId })
-          .sort({ createdAt: -1 })
-          .limit(25)
-          .toArray();
-      })(),
+    const profile = await loadOrCreateProfile(userId);
+    const db = await getMongoDb();
+    const userQuery = profile.email
+      ? { $or: [{ userId }, { email: profile.email }, { "client.email": profile.email }] }
+      : { userId };
+
+    const [requests, consultations] = await Promise.all([
+      db
+        .collection<ClientRequestRecord>("clientRequests")
+        .find(userQuery)
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .toArray(),
+      db
+        .collection<ClientConsultationRecord>("clientConsultations")
+        .find(userQuery)
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .toArray(),
     ]);
+
     res.json({
       profile: publicProfile(profile),
       requests: requests.map(publicRequest),
+      consultations: consultations.map(publicConsultation),
     });
   } catch (error) {
     req.log.error({ err: error, userId }, "Unable to load client overview");
@@ -363,8 +389,8 @@ router.post("/client/print-requests", async (req, res): Promise<void> => {
     projectName: parsed.data.projectName.trim(),
     serviceSlug: "print-3d",
     status: "submitted",
-    statusAr: "تم الاستلام",
-    statusEn: "Received",
+    statusAr: statusLabels.submitted.ar,
+    statusEn: statusLabels.submitted.en,
     material: parsed.data.material.trim(),
     finish: parsed.data.finish.trim(),
     quantity: parsed.data.quantity,
@@ -390,14 +416,20 @@ router.get("/client/consultations", async (req, res): Promise<void> => {
   if (!userId) return;
 
   try {
+    const profile = await loadOrCreateProfile(userId);
     const db = await getMongoDb();
+    const userQuery = profile.email
+      ? { $or: [{ userId }, { email: profile.email }, { "client.email": profile.email }] }
+      : { userId };
+
     const consultations = await db
       .collection<ClientConsultationRecord>("clientConsultations")
-      .find({ userId })
+      .find(userQuery)
       .sort({ createdAt: -1 })
-      .limit(25)
+      .limit(50)
       .toArray();
-    res.json(GetClientConsultationsResponse.parse(consultations.map(publicConsultation)));
+
+    res.json(consultations.map(publicConsultation));
   } catch (error) {
     req.log.error({ err: error, userId }, "Unable to load client consultations");
     res.status(503).json({ error: "Consultation service is temporarily unavailable" });
@@ -421,8 +453,8 @@ router.post("/client/consultations", async (req, res): Promise<void> => {
     reference: `AJ-CONSULT-${randomUUID().slice(0, 8).toUpperCase()}`,
     kind: parsed.data.kind,
     status: "submitted",
-    statusAr: "تم الاستلام",
-    statusEn: "Received",
+    statusAr: statusLabels.submitted.ar,
+    statusEn: statusLabels.submitted.en,
     title,
     details,
     ...(parsed.data.specialty?.trim() ? { specialty: parsed.data.specialty.trim() } : {}),

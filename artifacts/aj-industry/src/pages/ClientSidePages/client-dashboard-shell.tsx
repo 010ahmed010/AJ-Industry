@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth, useClerk } from '@/lib/auth';
 import { safeStorage } from '@/lib/storage';
-import { useGetClientOverview, useGetClientProfile, useUpdateClientProfile, getGetClientOverviewQueryKey, getGetClientProfileQueryKey } from '@workspace/api-client-react';
+import { useGetClientOverview, useGetClientProfile, useUpdateClientProfile, getGetClientOverviewQueryKey, getGetClientProfileQueryKey, type ClientConsultation } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
 import { Activity, AlertTriangle, ChevronLeft, Command, DollarSign, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, MessageCircle, PanelLeftClose, PanelLeftOpen, Printer, Settings2, ShieldCheck, UserCheck, X } from 'lucide-react';
 
@@ -43,11 +43,14 @@ export type ClientRequest = {
   createdAt: string | Date;
 };
 
+export type { ClientConsultation };
+
 type ClientDashboardContextValue = {
   language: ClientLanguage;
   setLanguage: (language: ClientLanguage) => void;
   profile: ClientProfile;
   requests: ClientRequest[];
+  consultations: ClientConsultation[];
   isLoading: boolean;
   error: unknown;
   saveProfile: (profile: Pick<ClientProfile, 'name' | 'company'>) => Promise<void>;
@@ -61,6 +64,7 @@ const DashboardContext = createContext<ClientDashboardContextValue>({
   setLanguage: () => undefined,
   profile: emptyProfile,
   requests: [],
+  consultations: [],
   isLoading: true,
   error: undefined,
   saveProfile: async () => undefined,
@@ -90,6 +94,8 @@ export function ClientDashboardProvider({ children }: { children: ReactNode }) {
     name: authUser?.name || rawProfile.name || 'عميل AJ',
   };
   const requests = (overviewQuery.data?.requests ?? []) as ClientRequest[];
+  const consultations = (((overviewQuery.data as any)?.consultations ?? []) as unknown) as ClientConsultation[];
+
   const saveProfile = async (nextProfile: Pick<ClientProfile, 'name' | 'company'>) => {
     const result = await updateProfile.mutateAsync({ data: nextProfile });
     queryClient.setQueryData(getGetClientProfileQueryKey(), result);
@@ -110,6 +116,7 @@ export function ClientDashboardProvider({ children }: { children: ReactNode }) {
       setLanguage: setLanguageState,
       profile,
       requests,
+      consultations,
       isLoading: profileQuery.isLoading || overviewQuery.isLoading,
       error: profileQuery.error || overviewQuery.error,
       saveProfile,

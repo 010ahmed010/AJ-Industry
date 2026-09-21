@@ -198,6 +198,18 @@ export const UpdateClientProfileResponse = zod.object({
 })
 
 
+export const ClientWorkflowStatus = zod.enum([
+  'submitted',
+  'reviewing',
+  'quoted',
+  'scheduled',
+  'in_queue',
+  'inqueued',
+  'contacted',
+  'completed',
+  'suspended',
+]);
+
 /**
  * @summary Get the authenticated client's requests and activity
  */
@@ -208,14 +220,14 @@ export const GetClientOverviewResponse = zod.object({
   "email": zod.string(),
   "name": zod.string(),
   "company": zod.string()
-}),
+}).passthrough(),
   "requests": zod.array(zod.object({
   "id": zod.string(),
   "reference": zod.string(),
-  "kind": zod.enum(['print']),
+  "kind": zod.enum(['print']).or(zod.string()),
   "projectName": zod.string(),
   "serviceSlug": zod.string(),
-  "status": zod.enum(['submitted', 'reviewing', 'quoted', 'scheduled', 'completed', 'suspended']),
+  "status": ClientWorkflowStatus.or(zod.string()),
   "statusAr": zod.string(),
   "statusEn": zod.string(),
   "material": zod.string(),
@@ -224,9 +236,32 @@ export const GetClientOverviewResponse = zod.object({
   "timeline": zod.string(),
   "notes": zod.string(),
   "fileName": zod.string().optional(),
+  "quoteAmount": zod.number().optional(),
+  "quoteCurrency": zod.string().optional(),
+  "estimatedDelivery": zod.string().optional(),
+  "adminFeedback": zod.string().optional(),
+  "adminUpdatedAt": zod.coerce.date().optional(),
   "createdAt": zod.coerce.date()
-}))
-})
+}).passthrough()),
+  "consultations": zod.array(zod.object({
+  "id": zod.string(),
+  "reference": zod.string(),
+  "kind": zod.enum(['consultation', 'specialist']).or(zod.string()),
+  "status": ClientWorkflowStatus.or(zod.string()),
+  "statusAr": zod.string(),
+  "statusEn": zod.string(),
+  "title": zod.string(),
+  "details": zod.string(),
+  "specialty": zod.string().optional(),
+  "providerType": zod.enum(['person', 'company', 'guide']).or(zod.string()).optional(),
+  "preferredProvider": zod.string().optional(),
+  "adminResponse": zod.string().optional(),
+  "meetingScheduledAt": zod.string().optional(),
+  "assignedSpecialist": zod.string().optional(),
+  "adminUpdatedAt": zod.coerce.date().optional(),
+  "createdAt": zod.coerce.date()
+}).passthrough()).optional()
+}).passthrough()
 
 
 /**
@@ -262,10 +297,10 @@ export const CreateClientPrintRequestBody = zod.object({
 export const CreateClientPrintRequestResponse = zod.object({
   "id": zod.string(),
   "reference": zod.string(),
-  "kind": zod.enum(['print']),
+  "kind": zod.enum(['print']).or(zod.string()),
   "projectName": zod.string(),
   "serviceSlug": zod.string(),
-  "status": zod.enum(['submitted', 'reviewing', 'quoted', 'scheduled', 'completed', 'suspended']),
+  "status": ClientWorkflowStatus.or(zod.string()),
   "statusAr": zod.string(),
   "statusEn": zod.string(),
   "material": zod.string(),
@@ -274,8 +309,13 @@ export const CreateClientPrintRequestResponse = zod.object({
   "timeline": zod.string(),
   "notes": zod.string(),
   "fileName": zod.string().optional(),
+  "quoteAmount": zod.number().optional(),
+  "quoteCurrency": zod.string().optional(),
+  "estimatedDelivery": zod.string().optional(),
+  "adminFeedback": zod.string().optional(),
+  "adminUpdatedAt": zod.coerce.date().optional(),
   "createdAt": zod.coerce.date()
-})
+}).passthrough()
 
 
 /**
@@ -284,17 +324,21 @@ export const CreateClientPrintRequestResponse = zod.object({
 export const GetClientConsultationsResponseItem = zod.object({
   "id": zod.string(),
   "reference": zod.string(),
-  "kind": zod.enum(['consultation', 'specialist']),
-  "status": zod.enum(['submitted', 'reviewing', 'contacted', 'completed', 'suspended']),
+  "kind": zod.enum(['consultation', 'specialist']).or(zod.string()),
+  "status": ClientWorkflowStatus.or(zod.string()),
   "statusAr": zod.string(),
   "statusEn": zod.string(),
   "title": zod.string(),
   "details": zod.string(),
   "specialty": zod.string().optional(),
-  "providerType": zod.enum(['person', 'company', 'guide']).optional(),
+  "providerType": zod.enum(['person', 'company', 'guide']).or(zod.string()).optional(),
   "preferredProvider": zod.string().optional(),
+  "adminResponse": zod.string().optional(),
+  "meetingScheduledAt": zod.string().optional(),
+  "assignedSpecialist": zod.string().optional(),
+  "adminUpdatedAt": zod.coerce.date().optional(),
   "createdAt": zod.coerce.date()
-})
+}).passthrough()
 export const GetClientConsultationsResponse = zod.array(GetClientConsultationsResponseItem)
 
 
@@ -325,16 +369,20 @@ export const CreateClientConsultationBody = zod.object({
 export const CreateClientConsultationResponse = zod.object({
   "id": zod.string(),
   "reference": zod.string(),
-  "kind": zod.enum(['consultation', 'specialist']),
-  "status": zod.enum(['submitted', 'reviewing', 'contacted', 'completed', 'suspended']),
+  "kind": zod.enum(['consultation', 'specialist']).or(zod.string()),
+  "status": ClientWorkflowStatus.or(zod.string()),
   "statusAr": zod.string(),
   "statusEn": zod.string(),
   "title": zod.string(),
   "details": zod.string(),
   "specialty": zod.string().optional(),
-  "providerType": zod.enum(['person', 'company', 'guide']).optional(),
+  "providerType": zod.enum(['person', 'company', 'guide']).or(zod.string()).optional(),
   "preferredProvider": zod.string().optional(),
+  "adminResponse": zod.string().optional(),
+  "meetingScheduledAt": zod.string().optional(),
+  "assignedSpecialist": zod.string().optional(),
+  "adminUpdatedAt": zod.coerce.date().optional(),
   "createdAt": zod.coerce.date()
-})
+}).passthrough()
 
 
