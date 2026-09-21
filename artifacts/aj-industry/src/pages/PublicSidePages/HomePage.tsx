@@ -136,7 +136,6 @@ function PageFooter() {
   const language: Language = 'ar';
   const { contact } = useSiteContact();
   return <footer className="relative overflow-hidden border-t border-border bg-[#071126] py-14" data-testid="site-footer">
-    <img src="/media/footer-reference.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-[.12]" />
     <div className="relative mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
       <div>
         <div className="flex items-center gap-3">

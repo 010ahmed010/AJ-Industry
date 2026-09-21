@@ -58,6 +58,7 @@ interface MongoAuthContextValue {
   adminLogin: (identifierOrPassword: string, maybePassword?: string) => Promise<{ success: boolean; error?: string; user?: MongoUser }>;
   setAdminPassword: (newPassword: string, currentPassword?: string, email?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   register: (name: string, email: string, password: string, company?: string) => Promise<{ success: boolean; error?: string }>;
+  demoLogin: (role: "client" | "admin") => Promise<void>;
   signOut: () => Promise<void>;
   addListener: (callback: (data: { user: any }) => void) => () => void;
   setSignedIn: (signedIn: boolean) => void;
@@ -77,6 +78,7 @@ const MongoAuthContext = createContext<MongoAuthContextValue>({
   adminLogin: async () => ({ success: false }),
   setAdminPassword: async () => ({ success: false }),
   register: async () => ({ success: false }),
+  demoLogin: async () => {},
   signOut: async () => {},
   addListener: () => () => {},
   setSignedIn: () => {},
@@ -261,6 +263,24 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const demoLogin = async (role: "client" | "admin") => {
+    try {
+      const res = await fetch("/api/auth/demo-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setToken(data.token);
+        setUser(data.user);
+        setIsSignedIn(true);
+        safeStorage.setItem(STORAGE_KEY, data.token);
+        safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+      }
+    } catch {}
+  };
+
   const signOut = async () => {
     if (token) {
       try {
@@ -288,6 +308,7 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
     adminLogin,
     setAdminPassword,
     register,
+    demoLogin,
     signOut,
     addListener: () => () => {},
     setSignedIn: setIsSignedIn,
@@ -306,76 +327,9 @@ function useClerkAndMongoAuth() {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const clerkAuth = useRealAuth();
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const clerkUser = useRealUser();
+  const { user: clerkUser } = useRealUser();
 
-  // If user is authenticated in MongoDB as ADMIN, MongoDB auth takes precedence for admin portal
-  if (mongoCtx.isSignedIn && mongoCtx.user?.role === "admin") {
-    return {
-      isLoaded: true,
-      isSignedIn: true,
-      userId: mongoCtx.userId,
-      user: mongoCtx.user,
-      role: mongoCtx.user.role,
-      sessionId: mongoCtx.token || "mongo_session",
-      actor: null,
-      orgId: null,
-      orgRole: null,
-      orgSlug: null,
-      has: () => true,
-      getToken: async () => mongoCtx.token,
-      adminLogin: mongoCtx.adminLogin,
-      setAdminPassword: mongoCtx.setAdminPassword,
-      login: mongoCtx.login,
-      register: mongoCtx.register,
-      signOut: mongoCtx.signOut,
-    };
-  }
-
-  // If signed in via Clerk, use real Clerk user identity
-  if (clerkAuth.isSignedIn && clerkUser.user) {
-    const primaryEmail =
-      clerkUser.user.primaryEmailAddress?.emailAddress ||
-      clerkUser.user.emailAddresses?.[0]?.emailAddress ||
-      "";
-    const fullName =
-      clerkUser.user.fullName ||
-      [clerkUser.user.firstName, clerkUser.user.lastName].filter(Boolean).join(" ") ||
-      clerkUser.user.username ||
-      "عميل AJ للتصنيع";
-    const company =
-      (clerkUser.user.unsafeMetadata?.company as string) ||
-      (clerkUser.user.publicMetadata?.company as string) ||
-      "";
-
-    const clientUser: MongoUser = {
-      id: clerkUser.user.id,
-      name: fullName,
-      email: primaryEmail,
-      company,
-      role: "client" as const,
-    };
-
-    return {
-      ...clerkAuth,
-      isLoaded: clerkAuth.isLoaded && clerkUser.isLoaded,
-      isSignedIn: true,
-      userId: clerkUser.user.id,
-      user: clientUser,
-      role: "client" as const,
-      adminLogin: mongoCtx.adminLogin,
-      setAdminPassword: mongoCtx.setAdminPassword,
-      login: mongoCtx.login,
-      register: mongoCtx.register,
-      signOut: async () => {
-        await mongoCtx.signOut();
-        try {
-          if (clerkAuth.signOut) await clerkAuth.signOut();
-        } catch {}
-      },
-    };
-  }
-
-  // If signed in via MongoDB client
+  // If user is authenticated in MongoDB (as admin or client), MongoDB auth takes precedence
   if (mongoCtx.isSignedIn && mongoCtx.user) {
     return {
       isLoaded: true,
@@ -394,7 +348,42 @@ function useClerkAndMongoAuth() {
       setAdminPassword: mongoCtx.setAdminPassword,
       login: mongoCtx.login,
       register: mongoCtx.register,
+      demoLogin: mongoCtx.demoLogin,
       signOut: mongoCtx.signOut,
+    };
+  }
+
+  // If signed in via Clerk
+  if (clerkAuth.isSignedIn) {
+    const clerkEmail = clerkUser?.primaryEmailAddress?.emailAddress || "client@aj-industry.com";
+    const clerkName =
+      clerkUser?.fullName ||
+      [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(" ") ||
+      clerkUser?.username ||
+      "عميل AJ للتصنيع";
+    const clerkCompany = (clerkUser?.publicMetadata?.company as string) || "AJ Partner";
+
+    return {
+      ...clerkAuth,
+      user: mongoCtx.user || {
+        id: clerkAuth.userId || clerkUser?.id || "clerk_client",
+        name: clerkName,
+        email: clerkEmail,
+        company: clerkCompany,
+        role: "client" as const,
+      },
+      role: "client" as const,
+      adminLogin: mongoCtx.adminLogin,
+      setAdminPassword: mongoCtx.setAdminPassword,
+      login: mongoCtx.login,
+      register: mongoCtx.register,
+      demoLogin: mongoCtx.demoLogin,
+      signOut: async () => {
+        await mongoCtx.signOut();
+        try {
+          if (clerkAuth.signOut) await clerkAuth.signOut();
+        } catch {}
+      },
     };
   }
 
@@ -416,6 +405,7 @@ function useClerkAndMongoAuth() {
     setAdminPassword: mongoCtx.setAdminPassword,
     login: mongoCtx.login,
     register: mongoCtx.register,
+    demoLogin: mongoCtx.demoLogin,
     signOut: mongoCtx.signOut,
   };
 }
@@ -435,11 +425,12 @@ function useMongoOnlyAuth() {
     orgRole: null,
     orgSlug: null,
     has: () => true,
-    getToken: async () => ctx.token || null,
+    getToken: async () => ctx.token || "demo_token",
     adminLogin: ctx.adminLogin,
     setAdminPassword: ctx.setAdminPassword,
     login: ctx.login,
     register: ctx.register,
+    demoLogin: ctx.demoLogin,
     signOut: ctx.signOut,
   };
 }
@@ -457,8 +448,6 @@ function useClerkAndMongoClerk() {
   const mongoCtx = useContext(MongoAuthContext);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const realClerk = useRealClerk();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const realUser = useRealUser();
 
   return {
     signOut: async (options?: any) => {
@@ -468,9 +457,7 @@ function useClerkAndMongoClerk() {
       } catch {}
     },
     addListener: (cb: any) => realClerk.addListener(cb),
-    user: realUser.isSignedIn && realUser.user
-      ? realUser.user
-      : mongoCtx.user
+    user: mongoCtx.user
       ? {
           id: mongoCtx.user.id,
           fullName: mongoCtx.user.name,
@@ -478,7 +465,7 @@ function useClerkAndMongoClerk() {
           lastName: mongoCtx.user.name.split(" ").slice(1).join(" ") || "",
           primaryEmailAddress: { emailAddress: mongoCtx.user.email },
         }
-      : null,
+      : realClerk.user,
     openSignIn: () => realClerk.openSignIn?.(),
     openSignUp: () => realClerk.openSignUp?.(),
   };
@@ -498,6 +485,14 @@ function useMongoOnlyClerk() {
           lastName: ctx.user.name.split(" ").slice(1).join(" ") || "",
           primaryEmailAddress: { emailAddress: ctx.user.email },
         }
+      : ctx.isSignedIn
+      ? {
+          id: "demo_client_user",
+          fullName: "عميل تجريبي / Demo Client",
+          firstName: "Demo",
+          lastName: "Client",
+          primaryEmailAddress: { emailAddress: "client@aj-industry.com" },
+        }
       : null,
     openSignIn: () => ctx.setSignedIn(true),
     openSignUp: () => ctx.setSignedIn(true),
@@ -512,32 +507,6 @@ export function useClerk() {
   return useMongoOnlyClerk();
 }
 
-export function useUser() {
-  const isClerkActive = useContext(ClerkActiveContext);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const realUser = useRealUser();
-  const auth = useAuth();
-
-  if (isClerkActive && isClerkConfigured && realUser.isSignedIn && realUser.user) {
-    return realUser;
-  }
-
-  return {
-    isLoaded: auth.isLoaded,
-    isSignedIn: auth.isSignedIn,
-    user: auth.user
-      ? {
-          id: auth.user.id,
-          fullName: auth.user.name,
-          firstName: auth.user.name.split(" ")[0] || auth.user.name,
-          lastName: auth.user.name.split(" ").slice(1).join(" ") || "",
-          primaryEmailAddress: { emailAddress: auth.user.email },
-          emailAddresses: [{ emailAddress: auth.user.email }],
-        }
-      : null,
-  };
-}
-
 export function SignIn(props: any) {
   return <RealSignIn {...props} />;
 }
@@ -546,9 +515,9 @@ export function SignUp(props: any) {
   return <RealSignUp {...props} />;
 }
 
-export function AuthCard({ defaultTab = "signin" }: { defaultTab?: "signin" | "register" }) {
-  const [tab, setTab] = useState<"signin" | "register">(defaultTab);
-  const { login, register, mongoStatus, isSignedIn, user } = useContext(MongoAuthContext);
+function AuthCard({ defaultTab = "signin" }: { defaultTab: "signin" | "register" | "demo" }) {
+  const [tab, setTab] = useState<"signin" | "register" | "demo">(defaultTab);
+  const { login, register, demoLogin, mongoStatus, isSignedIn, user } = useContext(MongoAuthContext);
 
   // Form states
   const [email, setEmail] = useState("");
@@ -589,6 +558,16 @@ export function AuthCard({ defaultTab = "signin" }: { defaultTab?: "signin" | "r
         window.location.href = "/client";
       }, 600);
     }
+  };
+
+  const handleQuickDemo = async (role: "client" | "admin") => {
+    setLoading(true);
+    await demoLogin(role);
+    setLoading(false);
+    setSuccessMsg(`تم الدخول بنجاح كـ ${role === "admin" ? "مدير النظام" : "عميل"}!`);
+    setTimeout(() => {
+      window.location.href = role === "admin" ? "/admin-aj-industry" : "/client";
+    }, 500);
   };
 
   return (
@@ -647,6 +626,17 @@ export function AuthCard({ defaultTab = "signin" }: { defaultTab?: "signin" | "r
           }`}
         >
           حساب جديد
+        </button>
+        <button
+          type="button"
+          onClick={() => { setTab("demo"); setError(null); }}
+          className={`flex-1 rounded-md py-2 text-center font-semibold transition-colors ${
+            tab === "demo"
+              ? "bg-primary text-[#071126]"
+              : "text-[#9aabc4] hover:text-[#edf4ff]"
+          }`}
+        >
+          دخول سريع
         </button>
       </div>
 
@@ -779,6 +769,43 @@ export function AuthCard({ defaultTab = "signin" }: { defaultTab?: "signin" | "r
             إنشاء وحفظ الحساب في MongoDB
           </button>
         </form>
+      )}
+
+      {/* Quick Demo Access */}
+      {tab === "demo" && (
+        <div className="mt-6 space-y-3">
+          <p className="text-xs leading-relaxed text-[#9aabc4]">
+            يمكنك الدخول بضغطة زر واحدة لتجربة لوحة تحكم العميل:
+          </p>
+
+          <button
+            type="button"
+            onClick={() => handleQuickDemo("client")}
+            disabled={loading}
+            className="flex w-full items-center justify-between rounded-lg border border-primary/40 bg-primary/10 p-3.5 text-start transition-colors hover:border-primary hover:bg-primary/20"
+          >
+            <div>
+              <p className="text-sm font-bold text-[#edf4ff]">دخول كعميل تجريبي (Client)</p>
+              <p className="mt-0.5 font-code text-[10px] text-[#9aabc4]">client@aj-industry.com</p>
+            </div>
+            <span className="rounded bg-primary px-2.5 py-1 font-code text-xs font-bold text-[#071126]">
+              دخول لوحة العميل &larr;
+            </span>
+          </button>
+
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-[#9aabc4]">
+            <p className="font-semibold text-amber-300">هل أنت مالك أو مسؤول الموقع؟</p>
+            <p className="mt-1 text-[11px] leading-relaxed">
+              لوحة الإدارة مفصولة كلياً وتتطلب مصادقة خاصة بكلمة مرور الإدارة عبر الرابط المخصص.
+            </p>
+            <a
+              href="/admin-login"
+              className="mt-2 inline-flex items-center gap-1 font-code text-xs font-bold text-amber-400 hover:underline"
+            >
+              الانتقال لبوابة دخول الإدارة الخاصة &larr;
+            </a>
+          </div>
+        </div>
       )}
 
       {/* Security Note Footer */}

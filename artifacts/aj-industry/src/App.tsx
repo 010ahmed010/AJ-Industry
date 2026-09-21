@@ -315,7 +315,6 @@ function PageFooter() {
   const { language } = useLanguage();
   const { contact } = useSiteContact();
   return <footer className="relative overflow-hidden border-t border-border bg-[#071126] py-14" data-testid="site-footer">
-    <img src="/media/footer-reference.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-[.12]" />
     <div className="relative mx-auto grid max-w-7xl gap-10 px-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr] lg:gap-12 lg:px-8">
       <div>
         <div className="flex items-center gap-3">
@@ -782,7 +781,7 @@ function HomeRedirect() {
 }
 
 function ClerkAuthTokenBridge() {
-  const { getToken, isSignedIn, isLoaded } = useAuth();
+  const { getToken, isSignedIn, isLoaded, user } = useAuth();
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       setAuthTokenGetter(async () => {
@@ -792,10 +791,35 @@ function ClerkAuthTokenBridge() {
           return null;
         }
       });
+
+      // Synchronize client account details into MongoDB
+      if (user && user.role !== "admin") {
+        void (async () => {
+          try {
+            const token = await getToken();
+            await fetch("/api/client/sync", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                "x-client-user-id": user.id,
+              },
+              body: JSON.stringify({
+                userId: user.id,
+                email: user.email,
+                name: user.name,
+                company: user.company,
+              }),
+            });
+          } catch (e) {
+            console.warn("[ClerkSync] Auto sync notice:", e);
+          }
+        })();
+      }
     } else {
       setAuthTokenGetter(null);
     }
-  }, [isLoaded, isSignedIn, getToken]);
+  }, [isLoaded, isSignedIn, getToken, user]);
   return null;
 }
 

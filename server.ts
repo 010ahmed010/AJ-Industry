@@ -7,7 +7,7 @@ const currentDir =
   typeof __dirname !== "undefined"
     ? __dirname
     : process.cwd();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === "production";
 
 async function startServer() {
@@ -15,6 +15,10 @@ async function startServer() {
 
   // Mount backend API server
   app.use(apiApp);
+
+  app.get("/favicon.ico", (_req, res) => {
+    res.redirect(301, "/favicon.svg");
+  });
 
   const clientDir = path.resolve(currentDir, "artifacts/aj-industry");
 
