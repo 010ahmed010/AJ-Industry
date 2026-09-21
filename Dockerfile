@@ -6,14 +6,14 @@ RUN npm install -g npm@latest
 WORKDIR /app
 
 # Copy root and workspace package manifests for optimal layer caching
-COPY package*.json ./
+COPY package*.json .npmrc* ./
 COPY artifacts/aj-industry/package*.json ./artifacts/aj-industry/
 COPY artifacts/api-server/package*.json ./artifacts/api-server/
 COPY lib/api-client-react/package*.json ./lib/api-client-react/
 COPY lib/api-zod/package*.json ./lib/api-zod/
 
 # Install all workspace dependencies for compilation
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy complete project source code
 COPY . .
@@ -35,8 +35,8 @@ RUN npm install -g npm@latest
 WORKDIR /app
 
 # Install only production dependencies
-COPY package*.json ./
-RUN npm install --omit=dev
+COPY package*.json .npmrc* ./
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy compiled backend bundle and frontend distribution assets from builder
 COPY --from=builder /app/dist ./dist
