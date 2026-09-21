@@ -42,6 +42,11 @@ type ClientRequestRecord = {
   timeline: string;
   notes: string;
   fileName?: string;
+  deletedByClient?: boolean;
+  deletedByClientAt?: Date;
+  deletedByAdmin?: boolean;
+  deletedByAdminAt?: Date;
+  updatedAt?: Date;
   createdAt: Date;
 };
 
@@ -58,6 +63,11 @@ type ClientConsultationRecord = {
   specialty?: string;
   providerType?: "person" | "company" | "guide";
   preferredProvider?: string;
+  deletedByClient?: boolean;
+  deletedByClientAt?: Date;
+  deletedByAdmin?: boolean;
+  deletedByAdminAt?: Date;
+  updatedAt?: Date;
   createdAt: Date;
 };
 
@@ -342,9 +352,13 @@ router.get("/client/overview", async (req, res): Promise<void> => {
   try {
     const profile = await loadOrCreateProfile(userId);
     const db = await getMongoDb();
-    const userQuery = profile.email
+    const baseUserFilter = profile.email
       ? { $or: [{ userId }, { email: profile.email }, { "client.email": profile.email }] }
       : { userId };
+    const userQuery = {
+      ...baseUserFilter,
+      deletedByClient: { $ne: true },
+    };
 
     const [requests, consultations] = await Promise.all([
       db
@@ -418,9 +432,13 @@ router.get("/client/consultations", async (req, res): Promise<void> => {
   try {
     const profile = await loadOrCreateProfile(userId);
     const db = await getMongoDb();
-    const userQuery = profile.email
+    const baseUserFilter = profile.email
       ? { $or: [{ userId }, { email: profile.email }, { "client.email": profile.email }] }
       : { userId };
+    const userQuery = {
+      ...baseUserFilter,
+      deletedByClient: { $ne: true },
+    };
 
     const consultations = await db
       .collection<ClientConsultationRecord>("clientConsultations")
@@ -474,8 +492,8 @@ router.post("/client/consultations", async (req, res): Promise<void> => {
   }
 });
 
-// PATCH /api/client/print-requests/:id - Client edits submitted request
-router.patch("/client/print-requests/:id", async (req, res): Promise<void> => {
+// PATCH /api/client/print-requests/:id & /api/client/requests/:id - Client edits submitted request
+const handlePatchPrintRequest = async (req: Request, res: Response): Promise<void> => {
   const userId = await authenticatedUserId(req, res);
   if (!userId) return;
 
@@ -485,7 +503,7 @@ router.patch("/client/print-requests/:id", async (req, res): Promise<void> => {
   try {
     const db = await getMongoDb();
     const collection = db.collection<ClientRequestRecord>("clientRequests");
-    const existing = await collection.findOne({ _id: id });
+    const existing = await collection.findOne({ _id: id, deletedByClient: { $ne: true } });
 
     if (!existing) {
       res.status(404).json({ error: "الطلب غير موجود", errorEn: "Order not found" });
@@ -499,13 +517,15 @@ router.patch("/client/print-requests/:id", async (req, res): Promise<void> => {
 
     if (existing.status !== "submitted") {
       res.status(400).json({
-        error: "لا يمكن تعديل الطلب بعد بدء المراجعة الهندسية أو التسعير. يرجى التواصل مع الدعم الفني.",
-        errorEn: "Cannot modify order once engineering review or quoting has started. Please contact support.",
+        error: "لا يمكن تعديل الطلب إلا في مرحلة الاستلام الأولى (Submitted). بعد بدء المراجعة الهندسية أو طابور التنفيذ أو التسعير، يرجى التواصل مع الدعم الفني.",
+        errorEn: "Cannot modify order once in queue, actively under engineering review, or quoted. Please contact support.",
       });
       return;
     }
 
-    const updates: Partial<ClientRequestRecord> = {};
+    const updates: Partial<ClientRequestRecord> = {
+      updatedAt: new Date(),
+    };
     if (projectName && typeof projectName === "string" && projectName.trim()) updates.projectName = projectName.trim();
     if (material && typeof material === "string" && material.trim()) updates.material = material.trim();
     if (finish && typeof finish === "string" && finish.trim()) updates.finish = finish.trim();
@@ -521,10 +541,13 @@ router.patch("/client/print-requests/:id", async (req, res): Promise<void> => {
     req.log.error({ err: error, id }, "Failed to update print request");
     res.status(500).json({ error: "تعذر تحديث الطلب", errorEn: "Failed to update request" });
   }
-});
+};
 
-// DELETE /api/client/print-requests/:id - Client deletes/cancels request
-router.delete("/client/print-requests/:id", async (req, res): Promise<void> => {
+router.patch("/client/print-requests/:id", handlePatchPrintRequest);
+router.patch("/client/requests/:id", handlePatchPrintRequest);
+
+// DELETE /api/client/print-requests/:id & /api/client/requests/:id - Client deletes request from client side (preserved in admin history)
+const handleDeletePrintRequest = async (req: Request, res: Response): Promise<void> => {
   const userId = await authenticatedUserId(req, res);
   if (!userId) return;
 
@@ -533,7 +556,7 @@ router.delete("/client/print-requests/:id", async (req, res): Promise<void> => {
   try {
     const db = await getMongoDb();
     const collection = db.collection<ClientRequestRecord>("clientRequests");
-    const existing = await collection.findOne({ _id: id });
+    const existing = await collection.findOne({ _id: id, deletedByClient: { $ne: true } });
 
     if (!existing) {
       res.status(404).json({ error: "الطلب غير موجود", errorEn: "Order not found" });
@@ -545,25 +568,34 @@ router.delete("/client/print-requests/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    // Client can delete if status is 'submitted' (cancel draft/new order) OR 'completed' (archive completed order) OR 'suspended'
-    if (existing.status !== "submitted" && existing.status !== "completed" && existing.status !== "suspended") {
+    // Client can delete if status is 'submitted' (cancel new order) OR 'completed' (dismiss completed) OR 'suspended'
+    const canDelete = ["submitted", "completed", "suspended"].includes(existing.status);
+    if (!canDelete) {
       res.status(400).json({
-        error: "لا يمكن حذف الطلب أثناء سير مرحلة المراجعة الهندسية أو جدول الإنتاج.",
-        errorEn: "Cannot delete order while actively in engineering review or production schedule.",
+        error: "لا يمكن حذف الطلب أثناء وجوده في طابور التنفيذ، أو قيد المراجعة الهندسية، أو بعد اعتماد التسعير.",
+        errorEn: "Cannot delete order while in queue, actively under engineering review, or quoted.",
       });
       return;
     }
 
-    await collection.deleteOne({ _id: id });
-    res.json({ success: true, message: "Order deleted successfully" });
+    // Soft-delete for client: preserves record in admin portal for business history and auditing
+    await collection.updateOne(
+      { _id: id },
+      { $set: { deletedByClient: true, deletedByClientAt: new Date() } }
+    );
+
+    res.json({ success: true, message: "Order removed from client dashboard" });
   } catch (error) {
     req.log.error({ err: error, id }, "Failed to delete print request");
     res.status(500).json({ error: "تعذر حذف الطلب", errorEn: "Failed to delete request" });
   }
-});
+};
+
+router.delete("/client/print-requests/:id", handleDeletePrintRequest);
+router.delete("/client/requests/:id", handleDeletePrintRequest);
 
 // PATCH /api/client/consultations/:id - Client edits submitted consultation
-router.patch("/client/consultations/:id", async (req, res): Promise<void> => {
+router.patch("/client/consultations/:id", async (req: Request, res: Response): Promise<void> => {
   const userId = await authenticatedUserId(req, res);
   if (!userId) return;
 
@@ -573,7 +605,7 @@ router.patch("/client/consultations/:id", async (req, res): Promise<void> => {
   try {
     const db = await getMongoDb();
     const collection = db.collection<ClientConsultationRecord>("clientConsultations");
-    const existing = await collection.findOne({ _id: id });
+    const existing = await collection.findOne({ _id: id, deletedByClient: { $ne: true } });
 
     if (!existing) {
       res.status(404).json({ error: "الاستشارة غير موجودة", errorEn: "Consultation not found" });
@@ -587,13 +619,15 @@ router.patch("/client/consultations/:id", async (req, res): Promise<void> => {
 
     if (existing.status !== "submitted") {
       res.status(400).json({
-        error: "لا يمكن تعديل الاستشارة بعد مراجعتها أو تحديد موعد الجلسة.",
+        error: "لا يمكن تعديل الاستشارة إلا في مرحلة الاستلام الأولى. بعد بدء المراجعة أو جدولة الموعد، يرجى التواصل مع الإدارة.",
         errorEn: "Cannot modify consultation once reviewing or meeting scheduled.",
       });
       return;
     }
 
-    const updates: Partial<ClientConsultationRecord> = {};
+    const updates: Partial<ClientConsultationRecord> = {
+      updatedAt: new Date(),
+    };
     if (title && typeof title === "string" && title.trim()) updates.title = title.trim();
     if (details && typeof details === "string" && details.trim()) updates.details = details.trim();
     if (specialty !== undefined) updates.specialty = typeof specialty === "string" ? specialty.trim() : undefined;
@@ -610,8 +644,8 @@ router.patch("/client/consultations/:id", async (req, res): Promise<void> => {
   }
 });
 
-// DELETE /api/client/consultations/:id - Client deletes/cancels consultation
-router.delete("/client/consultations/:id", async (req, res): Promise<void> => {
+// DELETE /api/client/consultations/:id - Client deletes consultation from client side (preserved in admin history)
+router.delete("/client/consultations/:id", async (req: Request, res: Response): Promise<void> => {
   const userId = await authenticatedUserId(req, res);
   if (!userId) return;
 
@@ -620,7 +654,7 @@ router.delete("/client/consultations/:id", async (req, res): Promise<void> => {
   try {
     const db = await getMongoDb();
     const collection = db.collection<ClientConsultationRecord>("clientConsultations");
-    const existing = await collection.findOne({ _id: id });
+    const existing = await collection.findOne({ _id: id, deletedByClient: { $ne: true } });
 
     if (!existing) {
       res.status(404).json({ error: "الاستشارة غير موجودة", errorEn: "Consultation not found" });
@@ -632,16 +666,22 @@ router.delete("/client/consultations/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    if (existing.status !== "submitted" && existing.status !== "completed" && existing.status !== "suspended") {
+    const canDelete = ["submitted", "completed", "suspended"].includes(existing.status);
+    if (!canDelete) {
       res.status(400).json({
-        error: "لا يمكن حذف الاستشارة أثناء جدولة الموعد أو دراستها مع الخبير.",
-        errorEn: "Cannot delete consultation while actively scheduled or under review.",
+        error: "لا يمكن حذف الاستشارة أثناء وجودها في طابور الجدولة، أو قيد الدراسة، أو بعد تحديد الموعد.",
+        errorEn: "Cannot delete consultation while in queue, under review, or actively scheduled.",
       });
       return;
     }
 
-    await collection.deleteOne({ _id: id });
-    res.json({ success: true, message: "Consultation deleted successfully" });
+    // Soft-delete for client: preserves consultation in admin portal for business history and tracking
+    await collection.updateOne(
+      { _id: id },
+      { $set: { deletedByClient: true, deletedByClientAt: new Date() } }
+    );
+
+    res.json({ success: true, message: "Consultation removed from client dashboard" });
   } catch (error) {
     req.log.error({ err: error, id }, "Failed to delete consultation");
     res.status(500).json({ error: "تعذر حذف الاستشارة", errorEn: "Failed to delete consultation" });

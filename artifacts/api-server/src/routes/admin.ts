@@ -57,8 +57,8 @@ router.get("/admin/overview", async (req: Request, res: Response): Promise<void>
     const profilesColl = db.collection("clientProfiles");
 
     const [allRequests, allConsultations, allInquiries, allProfiles] = await Promise.all([
-      requestsColl.find({}).sort({ createdAt: -1 }).toArray(),
-      consultationsColl.find({}).sort({ createdAt: -1 }).toArray(),
+      requestsColl.find({ deletedByAdmin: { $ne: true } }).sort({ createdAt: -1 }).toArray(),
+      consultationsColl.find({ deletedByAdmin: { $ne: true } }).sort({ createdAt: -1 }).toArray(),
       inquiriesColl.find({}).sort({ createdAt: -1 }).toArray(),
       profilesColl.find({}).sort({ createdAt: -1 }).toArray(),
     ]);
@@ -174,7 +174,9 @@ router.get("/admin/requests", async (req: Request, res: Response): Promise<void>
     const statusFilter = req.query.status as string | undefined;
     const searchFilter = req.query.search as string | undefined;
 
-    const query: Record<string, any> = {};
+    const query: Record<string, any> = {
+      deletedByAdmin: { $ne: true },
+    };
     if (statusFilter && statusFilter !== "all") {
       query.status = statusFilter;
     }
@@ -205,6 +207,8 @@ router.get("/admin/requests", async (req: Request, res: Response): Promise<void>
         estimatedDelivery: r.estimatedDelivery,
         adminFeedback: r.adminFeedback,
         adminUpdatedAt: r.adminUpdatedAt,
+        updatedAt: r.updatedAt,
+        deletedByClient: Boolean(r.deletedByClient),
         createdAt: r.createdAt,
         client: client
           ? { name: client.name, email: client.email, company: client.company }
@@ -281,7 +285,7 @@ router.patch("/admin/requests/:id", async (req: Request, res: Response): Promise
   }
 });
 
-// DELETE /api/admin/requests/:id - Permanently delete request
+// DELETE /api/admin/requests/:id - Delete request from admin view (preserved in client dashboard)
 router.delete("/admin/requests/:id", async (req: Request, res: Response): Promise<void> => {
   if (!checkAdminAccess(req)) {
     res.status(403).json({ error: "Admin authorization required" });
@@ -292,12 +296,18 @@ router.delete("/admin/requests/:id", async (req: Request, res: Response): Promis
   try {
     const db = await getMongoDb();
     const requestsColl = db.collection("clientRequests");
-    const result = await requestsColl.deleteOne({ _id: id });
-    if (result.deletedCount === 0) {
+    const existing = await requestsColl.findOne({ _id: id, deletedByAdmin: { $ne: true } });
+    if (!existing) {
       res.status(404).json({ error: "Request not found" });
       return;
     }
-    res.json({ success: true, message: "Print request permanently deleted" });
+
+    // Soft delete for admin: hides it from admin view while keeping it in client's dashboard
+    await requestsColl.updateOne(
+      { _id: id },
+      { $set: { deletedByAdmin: true, deletedByAdminAt: new Date() } }
+    );
+    res.json({ success: true, message: "Print request removed from admin view" });
   } catch (err: any) {
     res.status(500).json({ error: "Failed to delete request", details: err?.message });
   }
@@ -316,7 +326,9 @@ router.get("/admin/consultations", async (req: Request, res: Response): Promise<
     const profilesColl = db.collection("clientProfiles");
 
     const statusFilter = req.query.status as string | undefined;
-    const query: Record<string, any> = {};
+    const query: Record<string, any> = {
+      deletedByAdmin: { $ne: true },
+    };
     if (statusFilter && statusFilter !== "all") {
       query.status = statusFilter;
     }
@@ -344,6 +356,8 @@ router.get("/admin/consultations", async (req: Request, res: Response): Promise<
         meetingScheduledAt: c.meetingScheduledAt,
         assignedSpecialist: c.assignedSpecialist,
         adminUpdatedAt: c.adminUpdatedAt,
+        updatedAt: c.updatedAt,
+        deletedByClient: Boolean(c.deletedByClient),
         createdAt: c.createdAt,
         client: client
           ? { name: client.name, email: client.email, company: client.company }
@@ -403,7 +417,7 @@ router.patch("/admin/consultations/:id", async (req: Request, res: Response): Pr
   }
 });
 
-// DELETE /api/admin/consultations/:id - Permanently delete consultation
+// DELETE /api/admin/consultations/:id - Delete consultation from admin view (preserved in client dashboard)
 router.delete("/admin/consultations/:id", async (req: Request, res: Response): Promise<void> => {
   if (!checkAdminAccess(req)) {
     res.status(403).json({ error: "Admin authorization required" });
@@ -414,12 +428,18 @@ router.delete("/admin/consultations/:id", async (req: Request, res: Response): P
   try {
     const db = await getMongoDb();
     const consultationsColl = db.collection("clientConsultations");
-    const result = await consultationsColl.deleteOne({ _id: id });
-    if (result.deletedCount === 0) {
+    const existing = await consultationsColl.findOne({ _id: id, deletedByAdmin: { $ne: true } });
+    if (!existing) {
       res.status(404).json({ error: "Consultation not found" });
       return;
     }
-    res.json({ success: true, message: "Consultation permanently deleted" });
+
+    // Soft delete for admin: hides it from admin view while keeping it in client's portal
+    await consultationsColl.updateOne(
+      { _id: id },
+      { $set: { deletedByAdmin: true, deletedByAdminAt: new Date() } }
+    );
+    res.json({ success: true, message: "Consultation removed from admin view" });
   } catch (err: any) {
     res.status(500).json({ error: "Failed to delete consultation", details: err?.message });
   }

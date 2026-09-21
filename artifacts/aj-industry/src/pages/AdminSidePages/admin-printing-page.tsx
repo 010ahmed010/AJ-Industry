@@ -268,6 +268,11 @@ export function AdminPrintingPage({ language }: { language: Language }) {
                       statusEn={order.statusEn}
                       language={language}
                     />
+                    {(order as any).deletedByClient && (
+                      <span className="border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-code text-[10px] text-amber-300">
+                        {adminText(language, 'مؤرشف لدى العميل (محفوظ بالسجلات)', 'Removed by client (Kept in records)')}
+                      </span>
+                    )}
                     <span className="font-code text-xs text-primary font-bold">{order.reference}</span>
                     <span className="text-xs text-muted-foreground">·</span>
                     <span className="text-xs text-muted-foreground">

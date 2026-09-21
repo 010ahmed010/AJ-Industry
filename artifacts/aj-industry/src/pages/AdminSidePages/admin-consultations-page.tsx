@@ -277,6 +277,11 @@ export function AdminConsultationsPage({ language }: { language: Language }) {
                       statusEn={c.statusEn}
                       language={language}
                     />
+                    {(c as any).deletedByClient && (
+                      <span className="border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-code text-[10px] text-amber-300">
+                        {adminText(language, 'مؤرشف لدى العميل (محفوظ بالسجلات)', 'Removed by client (Kept in records)')}
+                      </span>
+                    )}
                     <span className="font-code text-xs text-primary font-bold">{c.reference}</span>
                     <span className="border border-border/80 bg-secondary/50 px-2 py-0.5 font-code text-[10px] text-muted-foreground">
                       {c.kind === 'specialist'
